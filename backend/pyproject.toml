@@ -1,0 +1,16 @@
+[project]
+name = "agentic-ui-backend"
+version = "0.1.0"
+description = "Google ADK reporting agent served over the AG-UI protocol"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "google-adk==2.15.0",                                 # the agent framework
+    "ag-ui-adk==0.14.0",                                  # the bridge between ADK and the web page
+    "litellm==1.110.2",                                   # other LLM providers (step 9)
+    "fastapi==0.165.0",                                   # the web server
+    "uvicorn==0.54.0",
+    "python-dotenv==1.2.4",                               # reads the .env file
+    "arize-phoenix==22.0.1",                              # tracing (step 10)
+    "arize-phoenix-otel==0.17.3",
+    "openinference-instrumentation-google-adk==1.1.9",
+]

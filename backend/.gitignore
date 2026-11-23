@@ -1,0 +1,19 @@
+# Files in this list are NOT uploaded to GitHub.
+
+# Your API keys. Never commit this file. (.env.example is the safe template.)
+.env
+
+# The Python environment with the downloaded packages (Google ADK, LiteLLM...).
+# Everyone recreates this folder with:  uv sync
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Operating system clutter
+.DS_Store
+Thumbs.db
+
+# Note: data/sales.db is NOT ignored on purpose. Students need the database.

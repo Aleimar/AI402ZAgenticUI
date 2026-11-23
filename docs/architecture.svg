@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 660" role="img" aria-label="Architecture: the browser page holds the chat, the UI tools and the dashboard. It talks to the CopilotKit runtime on the Next.js server, which talks to the Python backend. There, the AG-UI bridge runs the ADK agent, which uses an LLM and the run_sql_query tool on a SQLite database. Tool calls for UI tools travel back to the browser, where they draw the dashboard." font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0b0b0b"/>
+    </marker>
+    <marker id="ah-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2a78d6"/>
+    </marker>
+    <marker id="ah-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52514e"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="880" height="660" rx="16" fill="#f4f3ef"/>
+  <!-- Zone A: the browser -->
+  <rect x="16" y="28" width="848" height="144" rx="14" fill="#fcfcfb" stroke="#c3c2b7"/>
+  <text x="32" y="51" font-size="11" letter-spacing="1.2" fill="#52514e">BROWSER  ·  THE NEXT.JS PAGE (REACT)</text>
+
+  <rect x="40" y="64" width="230" height="84" rx="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="155" y="102" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">Chat</text>
+  <text x="155" y="122" text-anchor="middle" font-size="11.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#52514e">&lt;CopilotChat /&gt;</text>
+
+  <rect x="325" y="64" width="230" height="84" rx="10" fill="#e6f0fb" stroke="#2a78d6" stroke-width="1.8"/>
+  <text x="440" y="91" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">UI tools</text>
+  <text x="440" y="112" text-anchor="middle" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#0b0b0b">create_dashboard · add_kpi_card</text>
+  <text x="440" y="130" text-anchor="middle" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#0b0b0b">add_chart · add_table</text>
+
+  <rect x="610" y="64" width="230" height="84" rx="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="725" y="102" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">Dashboard</text>
+  <text x="725" y="122" text-anchor="middle" font-size="11.5" fill="#52514e">KPI cards · charts · tables</text>
+
+  <!-- 5: UI tools -> Dashboard -->
+  <line x1="555" y1="106" x2="606" y2="106" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-accent)"/>
+  <circle cx="582" cy="84" r="10" fill="#2a78d6"/>
+  <text x="582" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">5</text>
+
+  <!-- Zone B: the Next.js server -->
+  <rect x="16" y="220" width="564" height="96" rx="14" fill="#fcfcfb" stroke="#c3c2b7"/>
+  <text x="32" y="243" font-size="11" letter-spacing="1.2" fill="#52514e">NEXT.JS SERVER</text>
+
+  <rect x="40" y="254" width="515" height="46" rx="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="297" y="274" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">CopilotKit runtime</text>
+  <text x="297" y="291" text-anchor="middle" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#52514e">/api/copilotkit</text>
+
+  <!-- Arize Phoenix (optional) -->
+  <rect x="610" y="238" width="230" height="62" rx="10" fill="#ffffff" stroke="#52514e" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="725" y="265" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">Arize Phoenix</text>
+  <text x="725" y="284" text-anchor="middle" font-size="11.5" fill="#52514e">trace viewer · localhost:6006</text>
+
+  <!-- Zone C: the Python backend -->
+  <rect x="16" y="364" width="848" height="188" rx="14" fill="#fcfcfb" stroke="#c3c2b7"/>
+  <text x="32" y="387" font-size="11" letter-spacing="1.2" fill="#52514e">PYTHON BACKEND</text>
+
+  <rect x="40" y="398" width="515" height="46" rx="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="297" y="418" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">AG-UI bridge</text>
+  <text x="297" y="435" text-anchor="middle" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#52514e">ag-ui-adk · FastAPI on port 8000</text>
+
+  <rect x="610" y="398" width="230" height="46" rx="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="725" y="418" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">ADK agent</text>
+  <text x="725" y="435" text-anchor="middle" font-size="11.5" fill="#52514e">instructions + list of tools</text>
+
+  <line x1="559" y1="421" x2="606" y2="421" stroke="#0b0b0b" stroke-width="1.4" marker-start="url(#ah)" marker-end="url(#ah)"/>
+
+  <rect x="325" y="484" width="230" height="46" rx="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="440" y="504" text-anchor="middle" font-size="13" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#0b0b0b">run_sql_query</text>
+  <text x="440" y="521" text-anchor="middle" font-size="11.5" fill="#52514e">backend tool (Python)</text>
+
+  <!-- sales.db cylinder -->
+  <path d="M80,491 A75,7 0 0 1 230,491 V523 A75,7 0 0 1 80,523 Z" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <path d="M80,491 A75,7 0 0 0 230,491" fill="none" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="155" y="516" text-anchor="middle" font-size="12.5" font-weight="600" fill="#0b0b0b">sales.db  ·  SQLite</text>
+
+  <!-- 3: agent -> run_sql_query -> sales.db -->
+  <path d="M630,444 V507 H559" fill="none" stroke="#0b0b0b" stroke-width="1.4" marker-end="url(#ah)"/>
+  <circle cx="648" cy="474" r="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="648" y="478" text-anchor="middle" font-size="12" font-weight="700" fill="#0b0b0b">3</text>
+  <line x1="325" y1="507" x2="234" y2="507" stroke="#0b0b0b" stroke-width="1.4" marker-end="url(#ah)"/>
+  <text x="279" y="499" text-anchor="middle" font-size="11" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" fill="#52514e">SELECT</text>
+
+  <!-- The LLM -->
+  <rect x="610" y="592" width="230" height="52" rx="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="725" y="614" text-anchor="middle" font-size="14" font-weight="600" fill="#0b0b0b">LLM</text>
+  <text x="725" y="632" text-anchor="middle" font-size="11.5" fill="#52514e">Gemini, or others via LiteLLM</text>
+
+  <!-- 2: agent <-> LLM -->
+  <line x1="725" y1="448" x2="725" y2="588" stroke="#0b0b0b" stroke-width="1.4" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <circle cx="743" cy="572" r="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="743" y="576" text-anchor="middle" font-size="12" font-weight="700" fill="#0b0b0b">2</text>
+  <text x="709" y="576" text-anchor="end" font-size="12" fill="#0b0b0b">prompt + tool list down, tool calls up</text>
+
+  <!-- traces: agent -> Phoenix -->
+  <line x1="790" y1="398" x2="790" y2="304" stroke="#52514e" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ah-muted)"/>
+  <text x="802" y="345" font-size="11.5" fill="#52514e">traces</text>
+
+  <!-- 1: question down, answer text up (Chat <-> runtime <-> bridge) -->
+  <line x1="190" y1="152" x2="190" y2="250" stroke="#0b0b0b" stroke-width="1.4" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <line x1="190" y1="304" x2="190" y2="394" stroke="#0b0b0b" stroke-width="1.4" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <circle cx="172" cy="196" r="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="172" y="200" text-anchor="middle" font-size="12" font-weight="700" fill="#0b0b0b">1</text>
+  <text x="204" y="200" font-size="12" fill="#0b0b0b">question + list of UI tools</text>
+  <text x="204" y="345" font-size="12" fill="#0b0b0b">AG-UI events over HTTP</text>
+
+  <!-- 4: tool calls travel up to the browser -->
+  <line x1="420" y1="398" x2="420" y2="304" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-accent)"/>
+  <line x1="420" y1="254" x2="420" y2="152" stroke="#2a78d6" stroke-width="1.8" marker-end="url(#ah-accent)"/>
+  <circle cx="402" cy="196" r="10" fill="#2a78d6"/>
+  <text x="402" y="200" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">4</text>
+  <text x="432" y="200" font-size="12" fill="#0b0b0b">tool calls</text>
+
+  <!-- 6: tool results travel back down -->
+  <line x1="520" y1="148" x2="520" y2="250" stroke="#0b0b0b" stroke-width="1.4" marker-end="url(#ah)"/>
+  <line x1="520" y1="300" x2="520" y2="394" stroke="#0b0b0b" stroke-width="1.4" marker-end="url(#ah)"/>
+  <circle cx="538" cy="196" r="10" fill="#ffffff" stroke="#0b0b0b" stroke-width="1.2"/>
+  <text x="538" y="200" text-anchor="middle" font-size="12" font-weight="700" fill="#0b0b0b">6</text>
+  <text x="554" y="200" font-size="12" fill="#0b0b0b">tool results</text>
+</svg>

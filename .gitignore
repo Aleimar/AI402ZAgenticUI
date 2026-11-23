@@ -1,0 +1,22 @@
+# Secrets: your API keys live in these files. Never commit them.
+.env
+.env.local
+.env.*.local
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Operating system and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

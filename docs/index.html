@@ -1,0 +1,1708 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic UI Tutorial</title>
+<meta name="description" content="Build a reporting chatbot that draws its own dashboard, step by step, with Google ADK, CopilotKit, LiteLLM and Arize Phoenix.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: a sticky rail of steps on the left, one reading column on the right.
+   Prose stays near 68 characters wide; code, figures and tables use the full column. */
+:root {
+  color-scheme: light dark;
+  --bg: #f9f9f7;
+  --surface: #fcfcfb;
+  --raised: #ffffff;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --line: rgba(11, 11, 11, 0.1);
+  --line-strong: #c3c2b7;
+  --accent: #2a78d6;
+  --accent-ink: #1c5cab;
+  --accent-soft: #e6f0fb;
+  --code-bg: #f0efea;
+  --code-ink: #1d1d1b;
+  --hl: rgba(42, 120, 214, 0.14);
+  --good: #006300;
+  --good-soft: #e7f2e7;
+  --warn: #8a5300;
+  --warn-soft: #fbf1dc;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f0f0e;
+    --surface: #1a1a19;
+    --raised: #222220;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --line: rgba(255, 255, 255, 0.1);
+    --line-strong: #4a4a46;
+    --accent: #3987e5;
+    --accent-ink: #86b6ef;
+    --accent-soft: #14263d;
+    --code-bg: #171716;
+    --code-ink: #e6e5e0;
+    --hl: rgba(57, 135, 229, 0.24);
+    --good: #4cc24c;
+    --good-soft: #132513;
+    --warn: #e3a23a;
+    --warn-soft: #2a2110;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 1rem/1.65 var(--sans);
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--accent-ink); text-underline-offset: 0.15em; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+img { max-width: 100%; height: auto; display: block; }
+
+.page {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  gap: 3.5rem;
+  max-width: 74rem;
+  margin: 0 auto;
+  padding-block: 2.5rem 5rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* ---------- the rail ---------- */
+.rail {
+  position: sticky;
+  top: 1.5rem;
+  align-self: start;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+.rail a.course { display: block; padding: 0 0.5rem; font-family: var(--display); font-weight: 700; font-size: 1rem; color: var(--ink); text-decoration: none; }
+.rail a.course:hover { background: none; }
+.rail .course span { display: block; font-family: var(--sans); font-weight: 400; font-size: 0.8125rem; color: var(--ink-2); }
+.rail h2 {
+  margin: 1.5rem 0 0.4rem;
+  font: 600 0.6875rem/1 var(--sans);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.rail a {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  color: var(--ink-2);
+  text-decoration: none;
+}
+.rail a:hover { background: var(--surface); color: var(--ink); }
+.rail a[aria-current="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 500; }
+.rail a .n { flex: none; width: 1.25rem; font-family: var(--mono); font-size: 0.75rem; color: var(--accent-ink); padding-top: 0.1em; }
+
+/* ---------- the reading column ---------- */
+main { min-width: 0; max-width: 50rem; }
+main > section { padding-top: 3.25rem; }
+main p, main li, main dd { max-width: 68ch; }
+main ul, main ol { padding-left: 1.3rem; }
+main li + li { margin-top: 0.35rem; }
+
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 2.9rem); font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.7rem; font-weight: 600; letter-spacing: -0.01em; }
+h3 { font-size: 1.15rem; font-weight: 600; margin-top: 2.25rem; }
+h2 + p, h3 + p { margin-top: 0.75rem; }
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font: 600 0.75rem/1 var(--sans);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+.lead { font-size: 1.2rem; line-height: 1.55; color: var(--ink-2); margin: 1rem 0 0; max-width: 60ch; }
+
+.stack { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
+.stack li {
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+code, pre, kbd { font-family: var(--mono); font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+:not(pre) > code {
+  font-size: 0.86em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--code-ink);
+  overflow-wrap: anywhere;
+}
+kbd {
+  font-size: 0.8em;
+  padding: 0.1em 0.4em;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--raised);
+}
+
+/* ---------- code blocks ---------- */
+figure { margin: 1.25rem 0; }
+figure.code { border: 1px solid var(--line); border-radius: 10px; background: var(--code-bg); overflow: hidden; }
+figure.code figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.25rem;
+  padding: 0.3rem 0.4rem 0.3rem 0.9rem;
+  border-bottom: 1px solid var(--line);
+  font: 500 0.75rem/1.2 var(--mono);
+  color: var(--ink-2);
+}
+figure.code figcaption .where { font-family: var(--sans); font-weight: 600; color: var(--ink); margin-right: 0.5rem; }
+figure.code pre {
+  margin: 0;
+  padding: 0.9rem;
+  overflow-x: auto;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--code-ink);
+  tab-size: 2;
+}
+figure.code pre code { display: block; width: max-content; min-width: 100%; }
+figure.code .hl { display: inline-block; width: 100%; background: var(--hl); box-shadow: -0.9rem 0 0 var(--hl), 0.9rem 0 0 var(--hl); }
+figure.code.output { background: transparent; }
+figure.code.output pre { color: var(--ink-2); }
+.copy {
+  flex: none;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--raised);
+  color: var(--ink);
+  font: 500 0.75rem/1 var(--sans);
+  cursor: pointer;
+}
+.copy:hover { border-color: var(--ink-2); }
+
+/* ---------- figures ---------- */
+figure.shot img { border: 1px solid var(--line-strong); border-radius: 12px; }
+figure.diagram .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); padding: 0.5rem; }
+figure.diagram svg.arch { display: block; width: 100%; min-width: 44rem; height: auto; color: var(--ink); }
+figure > figcaption.cap { margin-top: 0.6rem; font-size: 0.875rem; color: var(--ink-2); max-width: 68ch; }
+
+/* ---------- callouts ---------- */
+.note {
+  margin: 1.25rem 0;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.note > :first-child { margin-top: 0; }
+.note > :last-child { margin-bottom: 0; }
+.note .tag {
+  display: block;
+  margin-bottom: 0.3rem;
+  font: 600 0.6875rem/1.2 var(--sans);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.note.check { background: var(--good-soft); border-color: transparent; }
+.note.check .tag { color: var(--good); }
+.note.warn { background: var(--warn-soft); border-color: transparent; }
+.note.warn .tag { color: var(--warn); }
+.note.key { background: var(--accent-soft); border-color: transparent; }
+.note.key .tag { color: var(--accent-ink); }
+
+/* ---------- tables ---------- */
+.table { overflow-x: auto; margin: 1.25rem 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; vertical-align: top; padding: 0.55rem 0.75rem 0.55rem 0; border-bottom: 1px solid var(--line); }
+th { font-weight: 600; font-size: 0.8125rem; color: var(--ink-2); border-bottom-color: var(--line-strong); white-space: nowrap; }
+td code { white-space: nowrap; }
+td.wrap code { white-space: normal; }
+
+/* ---------- details ---------- */
+details { margin: 1rem 0; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); }
+details > summary { cursor: pointer; padding: 0.7rem 1rem; font-weight: 500; }
+details > .inner { padding: 0 1rem 0.4rem; border-top: 1px solid var(--line); }
+details.fix > summary code { font-size: 0.82em; }
+
+/* ---------- small pieces ---------- */
+.os { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 1.25rem 0; font-size: 0.875rem; color: var(--ink-2); }
+.os button {
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: 500 0.8125rem/1 var(--sans);
+  cursor: pointer;
+}
+.os button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+html[data-os="mac"] .only-win, html[data-os="win"] .only-mac { display: none; }
+
+ol.flow { list-style: none; padding: 0; margin: 1.25rem 0; display: grid; gap: 0.6rem; counter-reset: flow; }
+ol.flow li { counter-increment: flow; display: grid; grid-template-columns: 1.75rem minmax(0, 1fr); gap: 0.6rem; margin: 0; }
+ol.flow li::before {
+  content: counter(flow);
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-top: 0.1rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  font: 700 0.75rem/1 var(--sans);
+}
+ol.flow li.ui::before { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 1rem; margin: 1.25rem 0; }
+.two > div { border: 1px solid var(--line-strong); border-radius: 10px; padding: 1rem 1.1rem; background: var(--surface); min-width: 0; }
+.two > div.ui { border-color: var(--accent); background: var(--accent-soft); }
+.two h3 { margin: 0 0 0.4rem; font-size: 1.05rem; }
+.two p { margin: 0.4rem 0 0; font-size: 0.95rem; }
+
+main p.part {
+  max-width: none;
+  margin-top: 4.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line-strong);
+  font: 600 0.75rem/1 var(--sans);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.part + section { padding-top: 1.75rem; }
+footer { margin-top: 5rem; padding-top: 1.25rem; border-top: 1px solid var(--line-strong); font-size: 0.875rem; color: var(--ink-2); }
+
+@media (max-width: 56rem) {
+  .page { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 1.5rem; }
+  .rail { position: static; max-height: none; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--line-strong); }
+  .rail ol { grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<nav class="rail" aria-label="Tutorial steps">
+  <a class="course" href="#top">AI402Z <span>Special Topics: Agentic UI</span></a>
+
+  <h2>Start here</h2>
+  <ol>
+    <li><a href="#idea"><span class="n">A</span>The idea: UI as tools</a></li>
+    <li><a href="#architecture"><span class="n">B</span>Architecture</a></li>
+  </ol>
+
+  <h2>Part 1 · Run it</h2>
+  <ol>
+    <li><a href="#step-1"><span class="n">1</span>Install the tools</a></li>
+    <li><a href="#step-2"><span class="n">2</span>Get the code</a></li>
+    <li><a href="#step-3"><span class="n">3</span>Install ADK, build the database</a></li>
+    <li><a href="#step-4"><span class="n">4</span>Start the agent</a></li>
+    <li><a href="#step-5"><span class="n">5</span>Install CopilotKit, start the app</a></li>
+    <li><a href="#step-6"><span class="n">6</span>Ask for a dashboard</a></li>
+  </ol>
+
+  <h2>Part 2 · Understand it</h2>
+  <ol>
+    <li><a href="#step-7"><span class="n">7</span>Read the backend</a></li>
+    <li><a href="#step-8"><span class="n">8</span>Read the frontend</a></li>
+  </ol>
+
+  <h2>Part 3 · Extend it</h2>
+  <ol>
+    <li><a href="#step-9"><span class="n">9</span>Another LLM with LiteLLM</a></li>
+    <li><a href="#step-10"><span class="n">10</span>Tracing with Phoenix</a></li>
+    <li><a href="#step-11"><span class="n">11</span>Make it yours</a></li>
+  </ol>
+
+  <h2>Help</h2>
+  <ol>
+    <li><a href="#troubleshooting"><span class="n">?</span>Troubleshooting</a></li>
+    <li><a href="#reference"><span class="n">i</span>Versions and links</a></li>
+  </ol>
+</nav>
+
+<main id="top">
+
+<header>
+  <p class="eyebrow">AI402Z · Special Topics: Agentic UI</p>
+  <h1>Build a chatbot that draws its own dashboard</h1>
+  <p class="lead">You ask a business question in a chat. An AI agent reads a database, then builds a dashboard on your screen out of React components. In this tutorial you install it, run it, and learn how every piece works.</p>
+  <ul class="stack" aria-label="Technologies used">
+    <li>Google ADK</li>
+    <li>CopilotKit</li>
+    <li>AG-UI protocol</li>
+    <li>LiteLLM</li>
+    <li>Arize Phoenix</li>
+    <li>SQLite</li>
+    <li>Next.js</li>
+  </ul>
+
+  <figure class="shot">
+    <img src="assets/app.png" width="2880" height="2020" alt="The finished app. On the left a dashboard titled 2025 Sales Overview with three KPI cards, a line chart of monthly revenue, a bar chart of revenue by region, a share chart by category and a table. On the right a chat where each tool call the agent made is listed.">
+    <figcaption class="cap">The finished app. The dashboard on the left was built by the agent. The chat on the right lists every tool it called to do so. Your dashboard will look different each time, because the LLM decides what to show.</figcaption>
+  </figure>
+
+  <div class="note">
+    <span class="tag">What you will learn</span>
+    <ul>
+      <li>What a tool is, and why a React component can be one.</li>
+      <li>How to build an agent with Google ADK and give it a database tool.</li>
+      <li>How CopilotKit connects that agent to a web page.</li>
+      <li>How to switch LLM provider with LiteLLM, and how to see inside the agent with Arize Phoenix.</li>
+    </ul>
+    <p>Part 1 takes about 30 minutes. You need basic Python and JavaScript. You do not need to know React well.</p>
+  </div>
+</header>
+
+<!-- ====================================================================== -->
+<section id="idea">
+  <p class="eyebrow">Start here · A</p>
+  <h2>The idea: UI as tools</h2>
+  <p>An LLM can only produce text. To make it <em>do</em> things, we give it <strong>tools</strong>. A tool is a function with a name, a description and a list of parameters. The LLM cannot run the function itself. It replies with a request such as &ldquo;please call <code>run_sql_query</code> with this SQL&rdquo;, our code runs the function, and the result goes back to the LLM. An LLM that works in this loop is called an <strong>agent</strong>.</p>
+  <p>Most tools fetch or change data on a server. This tutorial adds a second kind.</p>
+
+  <div class="two">
+    <div>
+      <h3>Backend tools</h3>
+      <p>A Python function on the server. Here there is one: <code>run_sql_query</code>, which reads the database.</p>
+      <p>The result is <strong>data</strong>.</p>
+    </div>
+    <div class="ui">
+      <h3>Frontend tools (UI tools)</h3>
+      <p>A JavaScript function in the browser. Here there are four, such as <code>add_chart</code>. Each one puts a React component on the page.</p>
+      <p>The result is <strong>something you can see</strong>.</p>
+    </div>
+  </div>
+
+  <p>To the LLM both kinds look the same: a name, a description, some parameters. That is the whole trick. When the LLM decides to call <code>add_chart</code> with a title and some numbers, a chart appears. The LLM chooses <em>which</em> components to show and <em>with what data</em>. Your React code decides <em>how</em> they look. This pattern is called <strong>agentic UI</strong> or generative UI.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="architecture">
+  <p class="eyebrow">Start here · B</p>
+  <h2>Architecture</h2>
+  <p>The app is two programs that you start separately: a Python backend that runs the agent, and a Next.js web app that shows the page. They talk to each other with <strong>AG-UI</strong>, an open protocol for streaming agent events (text, tool calls, results) to a user interface.</p>
+
+  <figure class="diagram">
+    <div class="scroll">
+<svg class="arch" viewBox="0 0 880 660" role="img" aria-label="Architecture: the browser page holds the chat, the UI tools and the dashboard. It talks to the CopilotKit runtime on the Next.js server, which talks to the Python backend. There, the AG-UI bridge runs the ADK agent, which uses an LLM and the run_sql_query tool on a SQLite database. Tool calls for UI tools travel back to the browser, where they draw the dashboard." font-family="inherit">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+    </marker>
+    <marker id="ah-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/>
+    </marker>
+    <marker id="ah-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-2)"/>
+    </marker>
+  </defs>
+
+  <!-- Zone A: the browser -->
+  <rect x="16" y="28" width="848" height="144" rx="14" fill="var(--surface)" stroke="var(--line-strong)"/>
+  <text x="32" y="51" font-size="11" letter-spacing="1.2" fill="var(--ink-2)">BROWSER  ·  THE NEXT.JS PAGE (REACT)</text>
+
+  <rect x="40" y="64" width="230" height="84" rx="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="155" y="102" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">Chat</text>
+  <text x="155" y="122" text-anchor="middle" font-size="11.5" font-family="var(--mono)" fill="var(--ink-2)">&lt;CopilotChat /&gt;</text>
+
+  <rect x="325" y="64" width="230" height="84" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.8"/>
+  <text x="440" y="91" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">UI tools</text>
+  <text x="440" y="112" text-anchor="middle" font-size="11" font-family="var(--mono)" fill="currentColor">create_dashboard · add_kpi_card</text>
+  <text x="440" y="130" text-anchor="middle" font-size="11" font-family="var(--mono)" fill="currentColor">add_chart · add_table</text>
+
+  <rect x="610" y="64" width="230" height="84" rx="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="725" y="102" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">Dashboard</text>
+  <text x="725" y="122" text-anchor="middle" font-size="11.5" fill="var(--ink-2)">KPI cards · charts · tables</text>
+
+  <!-- 5: UI tools -> Dashboard -->
+  <line x1="555" y1="106" x2="606" y2="106" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#ah-accent)"/>
+  <circle cx="582" cy="84" r="10" fill="var(--accent)"/>
+  <text x="582" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">5</text>
+
+  <!-- Zone B: the Next.js server -->
+  <rect x="16" y="220" width="564" height="96" rx="14" fill="var(--surface)" stroke="var(--line-strong)"/>
+  <text x="32" y="243" font-size="11" letter-spacing="1.2" fill="var(--ink-2)">NEXT.JS SERVER</text>
+
+  <rect x="40" y="254" width="515" height="46" rx="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="297" y="274" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">CopilotKit runtime</text>
+  <text x="297" y="291" text-anchor="middle" font-size="11" font-family="var(--mono)" fill="var(--ink-2)">/api/copilotkit</text>
+
+  <!-- Arize Phoenix (optional) -->
+  <rect x="610" y="238" width="230" height="62" rx="10" fill="var(--bg)" stroke="var(--ink-2)" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <text x="725" y="265" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">Arize Phoenix</text>
+  <text x="725" y="284" text-anchor="middle" font-size="11.5" fill="var(--ink-2)">trace viewer · localhost:6006</text>
+
+  <!-- Zone C: the Python backend -->
+  <rect x="16" y="364" width="848" height="188" rx="14" fill="var(--surface)" stroke="var(--line-strong)"/>
+  <text x="32" y="387" font-size="11" letter-spacing="1.2" fill="var(--ink-2)">PYTHON BACKEND</text>
+
+  <rect x="40" y="398" width="515" height="46" rx="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="297" y="418" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">AG-UI bridge</text>
+  <text x="297" y="435" text-anchor="middle" font-size="11" font-family="var(--mono)" fill="var(--ink-2)">ag-ui-adk · FastAPI on port 8000</text>
+
+  <rect x="610" y="398" width="230" height="46" rx="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="725" y="418" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">ADK agent</text>
+  <text x="725" y="435" text-anchor="middle" font-size="11.5" fill="var(--ink-2)">instructions + list of tools</text>
+
+  <line x1="559" y1="421" x2="606" y2="421" stroke="currentColor" stroke-width="1.4" marker-start="url(#ah)" marker-end="url(#ah)"/>
+
+  <rect x="325" y="484" width="230" height="46" rx="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="440" y="504" text-anchor="middle" font-size="13" font-weight="600" font-family="var(--mono)" fill="currentColor">run_sql_query</text>
+  <text x="440" y="521" text-anchor="middle" font-size="11.5" fill="var(--ink-2)">backend tool (Python)</text>
+
+  <!-- sales.db cylinder -->
+  <path d="M80,491 A75,7 0 0 1 230,491 V523 A75,7 0 0 1 80,523 Z" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <path d="M80,491 A75,7 0 0 0 230,491" fill="none" stroke="currentColor" stroke-width="1.2"/>
+  <text x="155" y="516" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">sales.db  ·  SQLite</text>
+
+  <!-- 3: agent -> run_sql_query -> sales.db -->
+  <path d="M630,444 V507 H559" fill="none" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
+  <circle cx="648" cy="474" r="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="648" y="478" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">3</text>
+  <line x1="325" y1="507" x2="234" y2="507" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
+  <text x="279" y="499" text-anchor="middle" font-size="11" font-family="var(--mono)" fill="var(--ink-2)">SELECT</text>
+
+  <!-- The LLM -->
+  <rect x="610" y="592" width="230" height="52" rx="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="725" y="614" text-anchor="middle" font-size="14" font-weight="600" fill="currentColor">LLM</text>
+  <text x="725" y="632" text-anchor="middle" font-size="11.5" fill="var(--ink-2)">Gemini, or others via LiteLLM</text>
+
+  <!-- 2: agent <-> LLM -->
+  <line x1="725" y1="448" x2="725" y2="588" stroke="currentColor" stroke-width="1.4" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <circle cx="743" cy="572" r="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="743" y="576" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">2</text>
+  <text x="709" y="576" text-anchor="end" font-size="12" fill="currentColor">prompt + tool list down, tool calls up</text>
+
+  <!-- traces: agent -> Phoenix -->
+  <line x1="790" y1="398" x2="790" y2="304" stroke="var(--ink-2)" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#ah-muted)"/>
+  <text x="802" y="345" font-size="11.5" fill="var(--ink-2)">traces</text>
+
+  <!-- 1: question down, answer text up (Chat <-> runtime <-> bridge) -->
+  <line x1="190" y1="152" x2="190" y2="250" stroke="currentColor" stroke-width="1.4" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <line x1="190" y1="304" x2="190" y2="394" stroke="currentColor" stroke-width="1.4" marker-start="url(#ah)" marker-end="url(#ah)"/>
+  <circle cx="172" cy="196" r="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="172" y="200" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">1</text>
+  <text x="204" y="200" font-size="12" fill="currentColor">question + list of UI tools</text>
+  <text x="204" y="345" font-size="12" fill="currentColor">AG-UI events over HTTP</text>
+
+  <!-- 4: tool calls travel up to the browser -->
+  <line x1="420" y1="398" x2="420" y2="304" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#ah-accent)"/>
+  <line x1="420" y1="254" x2="420" y2="152" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#ah-accent)"/>
+  <circle cx="402" cy="196" r="10" fill="var(--accent)"/>
+  <text x="402" y="200" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">4</text>
+  <text x="432" y="200" font-size="12" fill="currentColor">tool calls</text>
+
+  <!-- 6: tool results travel back down -->
+  <line x1="520" y1="148" x2="520" y2="250" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
+  <line x1="520" y1="300" x2="520" y2="394" stroke="currentColor" stroke-width="1.4" marker-end="url(#ah)"/>
+  <circle cx="538" cy="196" r="10" fill="var(--bg)" stroke="currentColor" stroke-width="1.2"/>
+  <text x="538" y="200" text-anchor="middle" font-size="12" font-weight="700" fill="currentColor">6</text>
+  <text x="554" y="200" font-size="12" fill="currentColor">tool results</text>
+</svg>
+
+    </div>
+    <figcaption class="cap">The path of one question. The blue path is the part this tutorial is about: a tool call that leaves the server and becomes a component in the browser. Arize Phoenix is optional and is added in step 10.</figcaption>
+  </figure>
+
+  <p>The numbers in the picture are the steps of one question:</p>
+  <ol class="flow">
+    <li><span>You type a question. The page sends it to the agent, together with the <strong>list of UI tools</strong> the page offers.</span></li>
+    <li><span>The agent sends the LLM its instructions, your question and the list of all tools, backend and UI. The LLM answers with tool calls.</span></li>
+    <li><span>Calls to <code>run_sql_query</code> run in Python on the server. The rows go back to the LLM, which now has real numbers.</span></li>
+    <li class="ui"><span>Calls to UI tools cannot run on the server. The agent pauses, and the calls travel to the browser as AG-UI events.</span></li>
+    <li class="ui"><span>The browser runs the handler of each UI tool. The handler updates React state, and the component appears on the dashboard.</span></li>
+    <li><span>The browser sends back a short result for each tool. The agent continues, and the LLM writes the summary you read in the chat.</span></li>
+  </ol>
+
+  <div class="table">
+    <table>
+      <thead><tr><th>Piece</th><th>What it does here</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Google ADK</strong></td><td>Agent Development Kit. The Python framework that runs the agent loop: call the LLM, run the tools it asks for, repeat.</td></tr>
+        <tr><td><strong>ag-ui-adk</strong></td><td>The bridge. It translates ADK events into AG-UI events and back, and serves them with FastAPI.</td></tr>
+        <tr><td><strong>CopilotKit</strong></td><td>The React side. It gives you the chat component and the hooks that turn components into tools.</td></tr>
+        <tr><td><strong>LiteLLM</strong></td><td>A translator that lets ADK use LLMs from other providers (OpenAI, Anthropic, Groq, Ollama and many more).</td></tr>
+        <tr><td><strong>Arize Phoenix</strong></td><td>A trace viewer. It records every LLM call and tool call so you can inspect them.</td></tr>
+        <tr><td><strong>SQLite</strong></td><td>The database, stored in one file. It holds two years of sales for a made-up shop called BrightCart.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<p class="part">Part 1 · Run it</p>
+
+<section id="step-1">
+  <p class="eyebrow">Step 1</p>
+  <h2>Install the tools</h2>
+  <p>You need three programs and one API key. Open a terminal and check what you already have.</p>
+
+  <div class="table">
+    <table>
+      <thead><tr><th>You need</th><th>Version</th><th>Check</th><th>Where to get it</th></tr></thead>
+      <tbody>
+        <tr><td>Git</td><td>any</td><td><code>git --version</code></td><td><a href="https://git-scm.com/downloads">git-scm.com</a></td></tr>
+        <tr><td>Node.js</td><td>20.9 or newer</td><td><code>node --version</code></td><td><a href="https://nodejs.org/">nodejs.org</a>, pick the LTS version</td></tr>
+        <tr><td>uv</td><td>any</td><td><code>uv --version</code></td><td>the command below</td></tr>
+        <tr><td>Gemini API key</td><td>free</td><td></td><td><a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Install uv</h3>
+  <p><a href="https://docs.astral.sh/uv/">uv</a> is a fast package manager for Python. It also downloads the right Python version for this project, so you do not have to install Python yourself.</p>
+
+  <div class="os" role="group" aria-label="Choose your operating system">
+    <span>Show commands for</span>
+    <button type="button" data-os="mac" aria-pressed="false">macOS / Linux</button>
+    <button type="button" data-os="win" aria-pressed="false">Windows</button>
+  </div>
+
+  <figure class="code only-mac">
+    <figcaption><span><span class="where">Terminal</span>macOS / Linux</span></figcaption>
+    <pre><code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></pre>
+  </figure>
+  <figure class="code only-win">
+    <figcaption><span><span class="where">Terminal</span>Windows PowerShell</span></figcaption>
+    <pre><code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code></pre>
+  </figure>
+  <p>Close the terminal and open a new one. Then <code>uv --version</code> should print a version number.</p>
+
+  <h3>Get a Gemini API key</h3>
+  <ol>
+    <li>Open <a href="https://aistudio.google.com/apikey">aistudio.google.com/apikey</a> and sign in with a Google account.</li>
+    <li>Click <strong>Create API key</strong>.</li>
+    <li>Copy the key and keep it somewhere safe. You will paste it in step 4.</li>
+  </ol>
+  <div class="note warn">
+    <span class="tag">Keep the key secret</span>
+    <p>An API key works like a password. Do not post it in a chat, a screenshot or a commit. This project keeps it in a file called <code>.env</code>, which Git is told to ignore.</p>
+  </div>
+  <p>The free tier of the Gemini API is enough for this tutorial. It limits how many requests you can send per minute, so an occasional &ldquo;quota&rdquo; error is normal. See <a href="#troubleshooting">Troubleshooting</a>.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="step-2">
+  <p class="eyebrow">Step 2</p>
+  <h2>Get the code</h2>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal</span></span></figcaption>
+    <pre><code>git clone https://github.com/Aleimar/AI402ZAgenticUI.git
+cd AI402ZAgenticUI</code></pre>
+  </figure>
+  <p>The project has two halves. You will read these files in part 2. For now, just see where things are.</p>
+  <figure class="code output">
+    <figcaption><span><span class="where">Project layout</span></span></figcaption>
+    <pre><code>AI402ZAgenticUI/
+├── backend/                         Python: the agent
+│   ├── agent.py                     the agent = model + instructions + tools
+│   ├── tools.py                     the backend tool: run_sql_query
+│   ├── main.py                      the web server that exposes the agent
+│   ├── tracing.py                   Arize Phoenix setup
+│   ├── data/seed_database.py        creates the sample database
+│   ├── data/sales.db                the sample database
+│   ├── pyproject.toml               the list of Python packages to install
+│   └── .env.example                 template for your settings and API key
+│
+├── frontend/                        Next.js + CopilotKit: the web page
+│   ├── package.json                 the list of JavaScript packages to install
+│   ├── app/page.tsx                 the page: dashboard on the left, chat on the right
+│   ├── app/layout.tsx               connects the page to the agent
+│   ├── app/api/copilotkit/.../route.ts   the CopilotKit runtime
+│   ├── hooks/useDashboardTools.tsx  the UI tools (the heart of this tutorial)
+│   └── components/                  KpiCard, ChartCard, DataTable, Dashboard
+│
+└── docs/                            this tutorial</code></pre>
+  </figure>
+  <h3>What is not in the repository</h3>
+  <p>Google ADK, CopilotKit and the other libraries are <strong>not</strong> in the code you just cloned. Downloaded packages are large and are never uploaded to GitHub. The repository only carries the <em>list</em> of packages. You install your own copy in the next steps.</p>
+  <div class="table">
+    <table>
+      <thead><tr><th>Missing after cloning</th><th>What it is</th><th>You create it in</th></tr></thead>
+      <tbody>
+        <tr><td><code>backend/.venv/</code></td><td>The Python packages: Google ADK, LiteLLM, Arize Phoenix. About 900 MB.</td><td>Step 3, with <code>uv sync</code></td></tr>
+        <tr><td><code>backend/.env</code></td><td>Your private settings and API key.</td><td>Step 4</td></tr>
+        <tr><td><code>frontend/node_modules/</code></td><td>The JavaScript packages: CopilotKit, Next.js, React. About 1 GB.</td><td>Step 5, with <code>npm install</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The files named <code>.gitignore</code> tell Git to leave these out. That is also why you can safely run <code>git add .</code> in your own copy later: your packages and your API key stay on your computer.</p>
+
+  <p>You will use two terminals at the same time, one for the backend and one for the frontend. Step 10 adds a third.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="step-3">
+  <p class="eyebrow">Step 3</p>
+  <h2>Install Google ADK and build the database</h2>
+
+  <h3>Install the Python packages</h3>
+  <p>In your first terminal, go into the backend folder and install the packages.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal 1</span>backend</span></figcaption>
+    <pre><code>cd backend
+uv sync</code></pre>
+  </figure>
+  <p><code>uv sync</code> reads <code>pyproject.toml</code>, the list of packages this project needs, and installs them into a private Python environment in <code>backend/.venv</code>. The first run downloads about 180 packages, so give it a few minutes. This is the list it reads:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/pyproject.toml</span></span></figcaption>
+    <pre><code>dependencies = [
+<span class="hl">    "google-adk==2.15.0",                                 # the agent framework</span>
+<span class="hl">    "ag-ui-adk==0.14.0",                                  # the bridge between ADK and the web page</span>
+<span class="hl">    "litellm==1.110.2",                                   # other LLM providers (step 9)</span>
+    "fastapi==0.165.0",                                   # the web server
+    "uvicorn==0.54.0",
+    "python-dotenv==1.2.4",                               # reads the .env file
+    "arize-phoenix==22.0.1",                              # tracing (step 10)
+    "arize-phoenix-otel==0.17.3",
+    "openinference-instrumentation-google-adk==1.1.9",
+]</code></pre>
+  </figure>
+  <p>Every version is fixed with <code>==</code>, so you install exactly what this tutorial was tested with.</p>
+  <div class="note check">
+    <span class="tag">Checkpoint</span>
+    <p>Run <code>uv run python -c "import google.adk; print('Google ADK', google.adk.__version__)"</code>. It prints <code>Google ADK 2.15.0</code>.</p>
+  </div>
+  <details>
+    <summary>Adding Google ADK to a project of your own</summary>
+    <div class="inner">
+      <p>You do not need this for the tutorial. In a new, empty folder, these two commands create a project and install the same agent packages:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">Terminal</span>a new project</span></figcaption>
+        <pre><code>uv init --python 3.12
+uv add google-adk==2.15.0 ag-ui-adk==0.14.0 litellm==1.110.2</code></pre>
+      </figure>
+    </div>
+  </details>
+
+  <h3>Build the database</h3>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal 1</span>backend</span></figcaption>
+    <pre><code>uv run data/seed_database.py</code></pre>
+  </figure>
+  <p>The script creates <code>data/sales.db</code> and prints:</p>
+  <figure class="code output">
+    <figcaption><span><span class="where">Expected output</span></span></figcaption>
+    <pre><code>Created .../backend/data/sales.db
+  products         30 rows
+  customers       320 rows
+  orders        5,617 rows
+  order_items  10,238 rows
+  sales         9,445 rows
+  total revenue (completed orders): $1,745,074.85</code></pre>
+  </figure>
+  <p>The data is random but seeded, so everybody gets exactly these numbers. That makes it easy to check the agent's answers against your classmates'. The repository already contains <code>sales.db</code>, and the script simply rebuilds it. Open <code>data/seed_database.py</code> if you want to see how the data is made.</p>
+
+  <h3>What is in it</h3>
+  <p>BrightCart is a made-up retailer. The database covers its orders from January 2024 to December 2025.</p>
+  <div class="table">
+    <table>
+      <thead><tr><th>Table</th><th>Rows</th><th>Columns</th></tr></thead>
+      <tbody>
+        <tr><td><code>products</code></td><td>30</td><td class="wrap"><code>product_id</code>, <code>product_name</code>, <code>category</code>, <code>unit_price</code>, <code>unit_cost</code></td></tr>
+        <tr><td><code>customers</code></td><td>320</td><td class="wrap"><code>customer_id</code>, <code>customer_name</code>, <code>segment</code>, <code>region</code>, <code>city</code>, <code>signup_date</code></td></tr>
+        <tr><td><code>orders</code></td><td>5,617</td><td class="wrap"><code>order_id</code>, <code>customer_id</code>, <code>order_date</code>, <code>channel</code>, <code>status</code></td></tr>
+        <tr><td><code>order_items</code></td><td>10,238</td><td class="wrap"><code>order_item_id</code>, <code>order_id</code>, <code>product_id</code>, <code>quantity</code>, <code>unit_price</code>, <code>discount_pct</code></td></tr>
+        <tr><td><code>sales</code> (view)</td><td>9,445</td><td class="wrap">One row per product sold in a completed order, with the customer and product details joined in and <code>revenue</code>, <code>cost</code> and <code>profit</code> already calculated.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The <code>sales</code> view is there to make the agent's job easier. Most questions can be answered from it with one short query. Try one yourself:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal 1</span>backend</span></figcaption>
+    <pre><code>uv run python -c "from tools import run_sql_query; print(run_sql_query('SELECT region, ROUND(SUM(revenue)) AS revenue FROM sales GROUP BY region ORDER BY revenue DESC'))"</code></pre>
+  </figure>
+  <figure class="code output">
+    <figcaption><span><span class="where">Expected output</span></span></figcaption>
+    <pre><code>{'status': 'success', 'columns': ['region', 'revenue'], 'rows': [['West', 604495.0], ['East', 541786.0], ['North', 342272.0], ['South', 256522.0]], 'row_count': 4}</code></pre>
+  </figure>
+  <p>You just called <code>run_sql_query</code> by hand. In a few minutes the agent will call the same function.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="step-4">
+  <p class="eyebrow">Step 4</p>
+  <h2>Start the agent</h2>
+  <p>The backend reads its settings from a file called <code>.env</code>. Create it from the template.</p>
+  <figure class="code only-mac">
+    <figcaption><span><span class="where">Terminal 1</span>backend · macOS / Linux</span></figcaption>
+    <pre><code>cp .env.example .env</code></pre>
+  </figure>
+  <figure class="code only-win">
+    <figcaption><span><span class="where">Terminal 1</span>backend · Windows</span></figcaption>
+    <pre><code>copy .env.example .env</code></pre>
+  </figure>
+  <p>Open <code>backend/.env</code> in your editor and paste your key after the equals sign, with no spaces and no quotes:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/.env</span></span></figcaption>
+    <pre><code><span class="hl">GOOGLE_API_KEY=paste-your-key-here</span>
+MODEL=gemini-3.8-flash</code></pre>
+  </figure>
+  <p>Save the file, then start the server:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal 1</span>backend</span></figcaption>
+    <pre><code>uv run main.py</code></pre>
+  </figure>
+  <figure class="code output">
+    <figcaption><span><span class="where">Expected output</span></span></figcaption>
+    <pre><code>Model:            gemini-3.8-flash
+Phoenix tracing:  off
+Agent endpoint:   http://localhost:8000/
+INFO:     Started server process [12345]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)</code></pre>
+  </figure>
+  <div class="note check">
+    <span class="tag">Checkpoint</span>
+    <p>Open <a href="http://localhost:8000/health">http://localhost:8000/health</a> in your browser. You should see <code>{"status":"ok","model":"gemini-3.8-flash","tracing":false}</code>.</p>
+  </div>
+  <p>Leave this terminal running. If the output contains <code>WARNING: missing in backend/.env: GOOGLE_API_KEY</code>, the key was not saved in the right file. Fix <code>.env</code>, stop the server with <kbd>Ctrl</kbd>+<kbd>C</kbd> and start it again.</p>
+
+  <details>
+    <summary>Using pip instead of uv</summary>
+    <div class="inner">
+      <p>You need Python 3.11, 3.12 or 3.13. Replace steps 3 and 4 with:</p>
+      <figure class="code only-mac">
+        <figcaption><span><span class="where">Terminal 1</span>macOS / Linux</span></figcaption>
+        <pre><code>cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python data/seed_database.py
+cp .env.example .env
+python main.py</code></pre>
+      </figure>
+      <figure class="code only-win">
+        <figcaption><span><span class="where">Terminal 1</span>Windows</span></figcaption>
+        <pre><code>cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python data\seed_database.py
+copy .env.example .env
+python main.py</code></pre>
+      </figure>
+      <p>Put your key in <code>.env</code> before the last command. In the rest of the tutorial, wherever you read <code>uv run something</code>, activate the environment and type the command without <code>uv run</code>. For a file such as <code>main.py</code>, type <code>python main.py</code>.</p>
+    </div>
+  </details>
+</section>
+
+<!-- ====================================================================== -->
+<section id="step-5">
+  <p class="eyebrow">Step 5</p>
+  <h2>Install CopilotKit and start the web app</h2>
+
+  <h3>Install CopilotKit</h3>
+  <p>Open a <strong>second terminal</strong> in the project folder. The backend keeps running in the first one.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal 2</span>frontend</span></figcaption>
+    <pre><code>cd frontend
+npm install</code></pre>
+  </figure>
+  <p>CopilotKit is not part of the code you cloned. <code>npm install</code> reads <code>package.json</code>, downloads every package listed there, and puts them in a new folder, <code>frontend/node_modules</code>. This is the list it reads:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">frontend/package.json</span></span></figcaption>
+    <pre><code>"dependencies": {
+<span class="hl">  "@ag-ui/client": "1.0.5",</span>
+<span class="hl">  "@copilotkit/react-core": "1.90.1",</span>
+<span class="hl">  "@copilotkit/runtime": "1.90.1",</span>
+  "next": "16.4.6",
+  "react": "19.3.1",
+  "react-dom": "19.3.1",
+  "recharts": "3.11.1",
+  "zod": "3.25.76"
+},</code></pre>
+  </figure>
+  <div class="table">
+    <table>
+      <thead><tr><th>Package</th><th>What it gives you</th></tr></thead>
+      <tbody>
+        <tr><td><code>@copilotkit/react-core</code></td><td>CopilotKit for the browser: the <code>&lt;CopilotKit&gt;</code> provider, the <code>&lt;CopilotChat&gt;</code> component and the <code>useFrontendTool</code> hook.</td></tr>
+        <tr><td><code>@copilotkit/runtime</code></td><td>CopilotKit for the server: the runtime that forwards the chat to the agent.</td></tr>
+        <tr><td><code>@ag-ui/client</code></td><td><code>HttpAgent</code>, which speaks the AG-UI protocol to the Python backend.</td></tr>
+        <tr><td><code>zod</code></td><td>Describes the parameters of each UI tool.</td></tr>
+        <tr><td><code>next</code>, <code>react</code>, <code>react-dom</code></td><td>The web framework.</td></tr>
+        <tr><td><code>recharts</code></td><td>Draws the charts.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><code>npm install</code> takes a few minutes the first time. It prints some &ldquo;deprecated&rdquo; and &ldquo;vulnerabilities&rdquo; notices that come from packages this project depends on. They do not stop the app. Do not run <code>npm audit fix</code>, because it changes the tested versions.</p>
+  <div class="note check">
+    <span class="tag">Checkpoint</span>
+    <p>Run <code>npm ls @copilotkit/react-core @copilotkit/runtime --depth=0</code>. Both packages are listed with version <code>1.90.1</code>:</p>
+    <figure class="code output">
+      <figcaption><span><span class="where">Expected output</span></span></figcaption>
+      <pre><code>agentic-ui-frontend@0.1.0 .../AI402ZAgenticUI/frontend
+├── @copilotkit/react-core@1.90.1
+└── @copilotkit/runtime@1.90.1</code></pre>
+    </figure>
+  </div>
+  <details>
+    <summary>Adding CopilotKit to a project of your own</summary>
+    <div class="inner">
+      <p>You do not need this for the tutorial. In an existing Next.js project, this one command installs the same CopilotKit packages:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">Terminal</span>your own Next.js project</span></figcaption>
+        <pre><code>npm install @copilotkit/react-core@1.90.1 @copilotkit/runtime@1.90.1 @ag-ui/client@1.0.5 zod@3.25.76</code></pre>
+      </figure>
+      <p>The three files you then write are the ones explained in <a href="#step-8">step 8</a>: the runtime route, the provider in the layout, and your tools.</p>
+    </div>
+  </details>
+
+  <h3>Start the web app</h3>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal 2</span>frontend</span></figcaption>
+    <pre><code>npm run dev</code></pre>
+  </figure>
+  <figure class="code output">
+    <figcaption><span><span class="where">Expected output</span></span></figcaption>
+    <pre><code>▲ Next.js 16.4.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.20:3000
+✓ Ready in 300ms</code></pre>
+  </figure>
+  <div class="note check">
+    <span class="tag">Checkpoint</span>
+    <p>Open <a href="http://localhost:3000">http://localhost:3000</a>. You see an empty dashboard on the left with the text &ldquo;Your dashboard will appear here&rdquo;, and a chat on the right.</p>
+  </div>
+  <p>Both terminals also print a line or two about anonymous telemetry from Next.js and CopilotKit. That is normal. Each line says how to turn it off.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="step-6">
+  <p class="eyebrow">Step 6</p>
+  <h2>Ask for a dashboard</h2>
+  <p>Click the suggestion <strong>2025 overview</strong> under the chat box, or type a question yourself:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">Chat</span></span></figcaption>
+    <pre><code>How did sales perform in 2025?</code></pre>
+  </figure>
+  <p>Now watch both sides of the screen.</p>
+  <ul>
+    <li>In the chat, small status lines appear one after another. <strong>Queried the database</strong> is the backend tool. Click <strong>show SQL</strong> to read the query the agent wrote. <strong>New dashboard</strong>, <strong>KPI card</strong> and the chart lines are UI tools.</li>
+    <li>On the left, the dashboard fills in, one component per tool call.</li>
+    <li>At the end, the agent writes a one or two sentence summary.</li>
+  </ul>
+  <p>Then keep talking to it. The agent remembers the conversation.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">Chat</span>one message at a time</span></figcaption>
+    <pre><code>Also show how revenue splits across product categories.
+Add a table of the top 5 products by revenue.
+Compare revenue and profit across regions.
+Which sales channel grew the most from 2024 to 2025?</code></pre>
+  </figure>
+  <p>On every chart, the <strong>Show data</strong> button switches between the chart and its numbers.</p>
+  <div class="note key">
+    <span class="tag">Notice</span>
+    <p>You never wrote code that says &ldquo;for an overview question, show three KPI cards and a line chart&rdquo;. The LLM decided that. Ask the same question twice and you may get a different layout. Your code only defines <em>what components exist</em>.</p>
+  </div>
+  <p>If something does not work, go to <a href="#troubleshooting">Troubleshooting</a>. Errors from the agent appear as a red bar at the bottom of the page.</p>
+</section>
+
+<!-- ====================================================================== -->
+<p class="part">Part 2 · Understand it</p>
+
+<section id="step-7">
+  <p class="eyebrow">Step 7</p>
+  <h2>Read the backend</h2>
+  <p>The backend is four short Python files. Read them in this order.</p>
+
+  <h3>The backend tool</h3>
+  <p>A tool in Google ADK is an ordinary Python function. ADK reads the function name, the type hints and the docstring, and turns them into the description the LLM sees. That is why the docstring is written for the LLM.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/tools.py</span></span></figcaption>
+    <pre><code><span class="hl">def run_sql_query(sql: str) -&gt; dict:</span>
+<span class="hl">    """Run one read-only SQL query on the BrightCart sales database and return the rows.</span>
+
+    Use this tool whenever you need numbers. The database is SQLite.
+
+    Args:
+        sql: A single SQLite SELECT statement. Aggregate inside SQL (SUM, COUNT,
+            GROUP BY, ORDER BY, LIMIT) so that the result is small.
+
+    Returns:
+        On success: {"status": "success", "columns": [...], "rows": [[...], ...], "row_count": 3}
+        On failure: {"status": "error", "error_message": "..."} - read the message,
+        fix the SQL and try again.
+    """
+    statement = sql.strip().rstrip(";").strip()
+    if not statement.lower().startswith(("select", "with")):
+        return {"status": "error", "error_message": "Only SELECT statements are allowed."}
+    if ";" in statement:
+        return {"status": "error", "error_message": "Send one statement at a time (no ';')."}
+
+    try:
+        connection = _connect()
+        try:
+            cursor = connection.execute(statement)
+            columns = [column[0] for column in cursor.description]
+            rows = cursor.fetchmany(MAX_ROWS + 1)
+        finally:
+            connection.close()
+    except (sqlite3.Error, FileNotFoundError) as error:
+        return {"status": "error", "error_message": str(error)}
+
+    result = {
+        "status": "success",
+        "columns": columns,
+        "rows": [list(row) for row in rows[:MAX_ROWS]],
+        "row_count": min(len(rows), MAX_ROWS),
+    }
+    if len(rows) &gt; MAX_ROWS:
+        result["note"] = f"Only the first {MAX_ROWS} rows are shown. Aggregate or add LIMIT."
+    return result</code></pre>
+  </figure>
+  <ul>
+    <li>The database is opened in <strong>read-only</strong> mode, and only <code>SELECT</code> statements are accepted. An agent should get the smallest permission that does the job.</li>
+    <li>Errors are <strong>returned</strong>, not raised. The LLM reads the error message and usually fixes its own SQL on the next try.</li>
+    <li>At most 50 rows go back. Everything a tool returns is sent to the LLM and costs tokens.</li>
+  </ul>
+  <p>The same file has a helper, <code>describe_database()</code>, that lists every table and column as text. You will see where it is used next.</p>
+
+  <h3>The agent</h3>
+  <p>An ADK agent is a model, instructions and a list of tools.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/agent.py</span></span></figcaption>
+    <pre><code>root_agent = LlmAgent(
+    name="reporting_agent",
+    model=choose_model(),
+    description="Answers business questions about BrightCart sales by building dashboards.",
+    instruction=INSTRUCTION,
+    tools=[
+<span class="hl">        run_sql_query,   # BACKEND tool: a Python function that runs on this server</span>
+<span class="hl">        AGUIToolset(),   # FRONTEND tools: whatever tools the web page registers (the UI!)</span>
+    ],
+)</code></pre>
+  </figure>
+  <p><code>AGUIToolset()</code> is the important line. It is a placeholder that means &ldquo;plus whatever tools the web page offers&rdquo;. The backend does not know their names. Each request from the browser carries the list, and the bridge fills it in. That is why you can add a UI tool later without touching Python.</p>
+  <p>The instructions are a long string named <code>INSTRUCTION</code> in the same file. Two parts of it matter most. First, the output of <code>describe_database()</code> is pasted in, so the LLM knows the tables without spending a tool call. Second, it describes the way of working:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/agent.py</span>part of INSTRUCTION</span></figcaption>
+    <pre><code># How to answer a data question
+
+Step 1 - Get the numbers. Call `run_sql_query`. You may call it several times
+in the same turn. Never invent numbers: every number you show must come from
+a query result. If a query fails, read the error, fix the SQL and retry.
+
+Step 2 - Build the dashboard. Your UI tools draw components on the user's
+screen. Call all of them together in ONE turn, in this order:
+  1. `create_dashboard` - always first. It clears the screen and sets the title.
+  2. `add_kpi_card`     - 2 to 4 headline numbers.
+  3. `add_chart`        - 1 to 3 charts. Use "line" for trends over time,
+                          "bar" to compare categories or show a ranking, and
+                          "share" for the parts of one total (6 parts at most).
+                          Set value_format to "currency" when the values are money.
+  4. `add_table`        - optional, when the exact figures matter (10 rows at most).
+
+Step 3 - Finish with one or two sentences that state the main insight. Do not
+repeat every number: the dashboard already shows them.</code></pre>
+  </figure>
+  <p>The instructions name the UI tools, but they do not define them. They only suggest an order. Change this text and you change how the agent behaves, which is one of the exercises in step 11.</p>
+
+  <h3>The server</h3>
+  <p>The last file puts the agent on the network so the web app can reach it.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/main.py</span></span></figcaption>
+    <pre><code># An ADK "App" wraps the agent together with app-level settings.
+# is_resumable=True lets a run PAUSE when the agent calls a frontend tool,
+# wait for the browser to draw the component, and then continue.
+adk_app = App(
+    name="reporting_app",
+    root_agent=root_agent,
+<span class="hl">    resumability_config=ResumabilityConfig(is_resumable=True),</span>
+)
+
+# ADKAgent is the bridge: it translates between ADK events and AG-UI events.
+agui_agent = ADKAgent.from_app(
+    adk_app,
+    user_id="student",            # one shared demo user (there is no login in this tutorial)
+    use_in_memory_services=True,  # keep chat sessions in memory (they are lost on restart)
+)
+
+app = FastAPI(title="Agentic UI tutorial - reporting agent")
+<span class="hl">add_adk_fastapi_endpoint(app, agui_agent, path="/")</span></code></pre>
+  </figure>
+  <ul>
+    <li><code>App</code> with <code>is_resumable=True</code> lets a run <strong>pause</strong>. When the LLM calls a UI tool, the server cannot run it. The run stops, waits for the browser, and continues when the result arrives.</li>
+    <li><code>ADKAgent</code> is the bridge from the architecture picture. It turns ADK's events into AG-UI events.</li>
+    <li><code>add_adk_fastapi_endpoint</code> serves the bridge at <code>http://localhost:8000/</code>.</li>
+  </ul>
+</section>
+
+<!-- ====================================================================== -->
+<section id="step-8">
+  <p class="eyebrow">Step 8</p>
+  <h2>Read the frontend</h2>
+  <p>The frontend is a normal Next.js app. Four files do the agent work.</p>
+
+  <h3>The runtime</h3>
+  <p>The browser does not talk to Python directly. It talks to the CopilotKit runtime, a small piece of server code inside the Next.js app, which forwards everything to the agent.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">frontend/app/api/copilotkit/[[...slug]]/route.ts</span></span></figcaption>
+    <pre><code>import { CopilotRuntime, createCopilotRuntimeHandler } from "@copilotkit/runtime/v2";
+import { HttpAgent } from "@ag-ui/client";
+
+const runtime = new CopilotRuntime({
+  agents: {
+    // "reporting_agent" is the name the frontend uses to pick this agent.
+    // It must match the `agent` prop in app/layout.tsx.
+<span class="hl">    reporting_agent: new HttpAgent({</span>
+      url: process.env.AGENT_URL ?? "http://127.0.0.1:8000/",
+    }),
+  },
+  // There is no login in this tutorial, so every visitor is the same demo user.
+  identifyUser: () =&gt; ({ id: "student", name: "Student" }),
+});
+
+const handler = createCopilotRuntimeHandler({
+  runtime,
+  basePath: "/api/copilotkit",
+});
+
+export { handler as GET, handler as POST };</code></pre>
+  </figure>
+  <p><code>HttpAgent</code> is a client for any agent that speaks AG-UI. If you rewrote the backend with another agent framework that speaks AG-UI, this file would stay the same.</p>
+
+  <h3>The provider</h3>
+  <figure class="code">
+    <figcaption><span><span class="where">frontend/app/layout.tsx</span></span></figcaption>
+    <pre><code>  &lt;CopilotKit&gt; connects every component inside it to the agent.
+  - runtimeUrl: where our CopilotKit runtime lives (app/api/copilotkit)
+  - agent:      which agent to talk to. Must match the name in route.ts
+  - enableInspector: set it to true to get CopilotKit's debugging panel,
+    a floating button that shows every event the agent sends
+*/}
+&lt;CopilotKit
+  runtimeUrl="/api/copilotkit"
+<span class="hl">  agent="reporting_agent"</span>
+  useSingleEndpoint={false}
+  enableInspector={false}
+&gt;
+  {children}
+&lt;/CopilotKit&gt;</code></pre>
+  </figure>
+  <p>Everything inside <code>&lt;CopilotKit&gt;</code> can talk to the agent. The name <code>reporting_agent</code> must be the same here and in <code>route.ts</code>.</p>
+
+  <h3>The page</h3>
+  <figure class="code">
+    <figcaption><span><span class="where">frontend/app/page.tsx</span></span></figcaption>
+    <pre><code>export default function Page() {
+  // The whole dashboard is ordinary React state. It starts empty (null).
+<span class="hl">  const [dashboard, setDashboard] = useState&lt;DashboardState | null&gt;(null);</span>
+
+  // Hand the agent the tools that change this state. See hooks/useDashboardTools.tsx.
+<span class="hl">  useDashboardTools(setDashboard);</span>
+
+  // Clickable example questions shown in the chat before the first message.
+  useConfigureSuggestions({
+    suggestions: [
+      { title: "2025 overview", message: "How did sales perform in 2025?" },
+      { title: "Best products", message: "What are our top 5 products by revenue?" },
+      { title: "Regions", message: "Compare revenue and profit across regions." },
+      { title: "Channels", message: "How is revenue split between sales channels?" },
+    ],
+  });
+
+  return (
+    &lt;div className="flex h-dvh flex-col lg:flex-row"&gt;
+      {/* Left: the dashboard that the agent builds */}
+      &lt;main className="min-h-0 min-w-0 flex-1 overflow-y-auto"&gt;
+        &lt;Dashboard dashboard={dashboard} /&gt;
+      &lt;/main&gt;
+
+      {/* Right: the chat */}
+      &lt;aside className="h-[55dvh] shrink-0 border-t border-line bg-white lg:h-auto lg:w-[420px] lg:border-l lg:border-t-0"&gt;
+        &lt;CopilotChat
+          labels={{
+            welcomeMessageText: "Hi! Ask me anything about BrightCart sales and I will build a dashboard for you.",
+            chatInputPlaceholder: "Ask about sales, products, regions…",
+          }}
+          // Hide the small copy-button toolbar under each message to keep the chat compact.
+          messageView={{ assistantMessage: { toolbarVisible: false } }}
+        /&gt;
+      &lt;/aside&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+  </figure>
+  <p>The dashboard is ordinary React state. <code>&lt;Dashboard&gt;</code> draws whatever is in it. <code>&lt;CopilotChat&gt;</code> is the whole chat. The interesting line is <code>useDashboardTools(setDashboard)</code>, which hands the agent the power to change that state.</p>
+
+  <h3>The UI tools</h3>
+  <p>This is the file the tutorial is about. It registers four tools with <code>useFrontendTool</code>. Here is one of them, complete:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">frontend/hooks/useDashboardTools.tsx</span></span></figcaption>
+    <pre><code>useFrontendTool(
+  {
+<span class="hl">    name: "add_kpi_card",</span>
+    description:
+      "Add a KPI card to the dashboard: one big headline number with a label. " +
+      "Use it for totals, averages and growth rates.",
+<span class="hl">    parameters: z.object({</span>
+      label: z.string().describe("What the number is, e.g. 'Total revenue'"),
+      value: z.string().describe("The number, already formatted for people, e.g. '$1.2M' or '12.5%'"),
+      caption: z.string().optional().describe("Optional context, e.g. '+22.6% vs 2024'"),
+    }),
+<span class="hl">    handler: async ({ label, value, caption }, { toolCall }) =&gt; {</span>
+      addWidget(setDashboard, { id: toolCall.id, kind: "kpi", label, value, caption });
+      return `KPI card "${label}" is now on the dashboard.`;
+    },
+<span class="hl">    render: ({ args, status }) =&gt; (</span>
+      &lt;ToolChip done={status === ToolCallStatus.Complete}&gt;KPI card · {args.label}&lt;/ToolChip&gt;
+    ),
+  },
+  [],
+);</code></pre>
+  </figure>
+  <div class="table">
+    <table>
+      <thead><tr><th>Field</th><th>Who reads it</th><th>What it is for</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code>, <code>description</code></td><td>the LLM</td><td>How the LLM knows the tool exists and when to use it.</td></tr>
+        <tr><td><code>parameters</code></td><td>the LLM</td><td>A <a href="https://zod.dev/">Zod</a> schema. It says which arguments to send. Every <code>.describe()</code> is a hint for the LLM.</td></tr>
+        <tr><td><code>handler</code></td><td>the browser</td><td>Runs when the agent calls the tool. Here it adds a KPI card to the React state. What it returns goes back to the LLM as the tool result.</td></tr>
+        <tr><td><code>render</code></td><td>the browser</td><td>Draws the small status line for this call inside the chat.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Compare this with <code>run_sql_query</code> in Python. Name, description, parameters, a function body, a return value. It is the same idea in a different language and a different place.</p>
+  <p>The four tools map one to one onto components:</p>
+  <div class="table">
+    <table>
+      <thead><tr><th>Tool</th><th>What the handler does</th><th>Component</th></tr></thead>
+      <tbody>
+        <tr><td><code>create_dashboard</code></td><td>Clears the state and sets a title</td><td><code>Dashboard.tsx</code></td></tr>
+        <tr><td><code>add_kpi_card</code></td><td>Adds one headline number</td><td><code>KpiCard.tsx</code></td></tr>
+        <tr><td><code>add_chart</code></td><td>Adds a line, bar or share chart</td><td><code>ChartCard.tsx</code></td></tr>
+        <tr><td><code>add_table</code></td><td>Adds a table</td><td><code>DataTable.tsx</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The components themselves know nothing about AI. <code>KpiCard</code> is a few lines of plain React:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">frontend/components/KpiCard.tsx</span></span></figcaption>
+    <pre><code>import type { KpiWidget } from "@/lib/types";
+
+/** One headline number, e.g. "Revenue 2025 - $961K - +22.6% vs 2024". */
+export function KpiCard({ label, value, caption }: KpiWidget) {
+  return (
+    &lt;div className="widget-in rounded-xl border border-line bg-surface p-4"&gt;
+      &lt;div className="text-sm text-ink-2"&gt;{label}&lt;/div&gt;
+      &lt;div className="mt-1 text-3xl font-semibold text-ink"&gt;{value}&lt;/div&gt;
+      {caption &amp;&amp; &lt;div className="mt-1 text-sm text-ink-2"&gt;{caption}&lt;/div&gt;}
+    &lt;/div&gt;
+  );
+}</code></pre>
+  </figure>
+
+  <h3>Showing a backend tool in the chat</h3>
+  <p>The &ldquo;Queried the database&rdquo; line comes from the same file. <code>useRenderTool</code> has no handler, because <code>run_sql_query</code> runs in Python. It only decides how that tool call <em>looks</em> in the chat.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">frontend/hooks/useDashboardTools.tsx</span></span></figcaption>
+    <pre><code>useRenderTool(
+  {
+    name: "run_sql_query",
+    parameters: z.object({ sql: z.string() }),
+    render: ({ parameters, status }) =&gt; &lt;SqlChip sql={parameters.sql} done={status === "complete"} /&gt;,
+  },
+  [],
+);</code></pre>
+  </figure>
+
+  <h3>Follow one question through the system</h3>
+  <p>This is the stream of AG-UI events the backend sends for one question, shortened. Compare it with the six numbered steps in the <a href="#architecture">architecture picture</a>.</p>
+  <figure class="code output">
+    <figcaption><span><span class="where">AG-UI events</span>request 1</span></figcaption>
+    <pre><code>RUN_STARTED
+TOOL_CALL_START    run_sql_query        a backend tool: Python runs it
+TOOL_CALL_ARGS     {"sql": "SELECT order_month, ROUND(SUM(revenue)) ..."}
+TOOL_CALL_END
+TOOL_CALL_RESULT   {"status": "success", "columns": [...], "rows": [...]}
+TOOL_CALL_START    create_dashboard     a UI tool: nobody on the server can run it
+TOOL_CALL_ARGS     {"title": "2025 Sales Overview"}
+TOOL_CALL_END
+TOOL_CALL_START    add_kpi_card
+TOOL_CALL_ARGS     {"label": "Revenue 2025", "value": "$961K", "caption": "+22.6% vs 2024"}
+TOOL_CALL_END
+RUN_FINISHED                            the run pauses and waits for the browser</code></pre>
+  </figure>
+  <p>The browser now runs the two handlers. The dashboard changes. Then CopilotKit sends a second request that carries the two tool results:</p>
+  <figure class="code output">
+    <figcaption><span><span class="where">AG-UI events</span>request 2</span></figcaption>
+    <pre><code>RUN_STARTED
+TEXT_MESSAGE_START
+TEXT_MESSAGE_CONTENT   "Revenue reached $961K in 2025, up 22.6% on 2024. ..."
+TEXT_MESSAGE_END
+RUN_FINISHED</code></pre>
+  </figure>
+  <p>Notice that <code>run_sql_query</code> has a <code>TOOL_CALL_RESULT</code> in the first request and the UI tools do not. The server could answer the first one itself. For the others it had to wait for you.</p>
+</section>
+
+<!-- ====================================================================== -->
+<p class="part">Part 3 · Extend it</p>
+
+<section id="step-9">
+  <p class="eyebrow">Step 9</p>
+  <h2>Use another LLM with LiteLLM</h2>
+  <p>Google ADK talks to Gemini models directly. For every other provider it uses <a href="https://docs.litellm.ai/">LiteLLM</a>, a library that gives 100+ LLM providers one common interface. In ADK you wrap the model name in <code>LiteLlm</code>, and nothing else in the agent changes.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/agent.py</span></span></figcaption>
+    <pre><code># Which LLM to use. Change it in .env, not here.
+MODEL_NAME = os.getenv("MODEL") or "gemini-3.8-flash"
+
+
+def choose_model():
+    """Turn MODEL_NAME into something ADK can use.
+
+    - A plain Gemini name such as "gemini-3.8-flash" is passed to ADK as a
+      string. ADK talks to Gemini natively and reads GOOGLE_API_KEY.
+    - A name written as "provider/model", such as "openai/gpt-5.4-mini" or
+      "ollama_chat/mistral-small3.1", is wrapped in LiteLlm. LiteLLM is a
+      translator that lets ADK talk to 100+ LLM providers through one interface.
+    """
+    if "/" in MODEL_NAME:
+<span class="hl">        return LiteLlm(model=MODEL_NAME)</span>
+    return MODEL_NAME</code></pre>
+  </figure>
+  <p>The rule in this project is simple. A name with a slash, written <code>provider/model</code>, goes through LiteLLM. A name without a slash is a Gemini model.</p>
+
+  <h3>Switch provider</h3>
+  <ol>
+    <li>Open <code>backend/.env</code>.</li>
+    <li>Change <code>MODEL</code> and add the key of that provider, using a row from the table below.</li>
+    <li>Stop the backend with <kbd>Ctrl</kbd>+<kbd>C</kbd> and start it again with <code>uv run main.py</code>. The first line it prints shows the model in use.</li>
+  </ol>
+  <div class="table">
+    <table>
+      <thead><tr><th>Provider</th><th><code>MODEL=</code> (example)</th><th>Also set in <code>.env</code></th><th>Get a key</th></tr></thead>
+      <tbody>
+        <tr><td>Google Gemini (default)</td><td><code>gemini-3.8-flash</code></td><td><code>GOOGLE_API_KEY</code></td><td><a href="https://aistudio.google.com/apikey">AI Studio</a>, free tier</td></tr>
+        <tr><td>OpenAI</td><td><code>openai/gpt-5.4-mini</code></td><td><code>OPENAI_API_KEY</code></td><td><a href="https://platform.openai.com/api-keys">platform.openai.com</a></td></tr>
+        <tr><td>Anthropic</td><td><code>anthropic/claude-sonnet-5-5</code></td><td><code>ANTHROPIC_API_KEY</code></td><td><a href="https://platform.claude.com/">platform.claude.com</a></td></tr>
+        <tr><td>Groq</td><td><code>groq/openai/gpt-oss-120b</code></td><td><code>GROQ_API_KEY</code></td><td><a href="https://console.groq.com/keys">console.groq.com</a>, free tier</td></tr>
+        <tr><td>Ollama (runs on your computer)</td><td><code>ollama_chat/mistral-small3.1</code></td><td><code>OLLAMA_API_BASE=http://localhost:11434</code></td><td>no key, see below</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>For example, to use OpenAI:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/.env</span></span></figcaption>
+    <pre><code>MODEL=openai/gpt-5.4-mini
+OPENAI_API_KEY=paste-your-openai-key-here</code></pre>
+  </figure>
+  <p>Model names change often. The names in the table are examples that were current in November 2026. If a provider answers &ldquo;model not found&rdquo;, look up the current name in <a href="https://docs.litellm.ai/docs/providers">LiteLLM's list of providers</a>, where you also find the other 100 providers.</p>
+
+  <div class="note">
+    <span class="tag">Running a model on your own computer with Ollama</span>
+    <ul>
+      <li>Install <a href="https://ollama.com/">Ollama</a> and download a model, for example <code>ollama pull mistral-small3.1</code>.</li>
+      <li>The model must support tools. Check with <code>ollama show mistral-small3.1</code> and look for <strong>tools</strong> under Capabilities.</li>
+      <li>Write the provider as <code>ollama_chat</code>, not <code>ollama</code>. The ADK documentation warns that the second form can loop forever on tool calls.</li>
+      <li>Small local models are weaker at this task. They may build a simpler dashboard, or forget a step.</li>
+    </ul>
+  </div>
+  <div class="note warn only-win">
+    <span class="tag">Windows</span>
+    <p>If the backend stops with <code>UnicodeDecodeError</code> after you switch to a LiteLLM model, run <code>$env:PYTHONUTF8 = "1"</code> in PowerShell and start the backend again in the same window.</p>
+  </div>
+  <p>What did not change is the lesson here. The tools, the instructions, the frontend and the dashboard stayed the same. Only the model behind the agent is different. Try the same question with two models and compare the dashboards they build.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="step-10">
+  <p class="eyebrow">Step 10</p>
+  <h2>Trace the agent with Arize Phoenix</h2>
+  <p>When an agent gives a strange answer, you need to see what happened inside. Which prompt did the LLM get? Which tools did it call, in what order, with what arguments? How many tokens did it cost? <a href="https://arize.com/docs/phoenix">Arize Phoenix</a> is an open-source tool that records all of that. One recorded run is called a <strong>trace</strong>. Each step inside it is a <strong>span</strong>.</p>
+
+  <h3>Start Phoenix</h3>
+  <p>Phoenix was installed with the other Python packages in step 3. Open a <strong>third terminal</strong>:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal 3</span>phoenix</span></figcaption>
+    <pre><code>cd backend
+uv run phoenix serve</code></pre>
+  </figure>
+  <p>The first start takes up to a minute while Phoenix prepares its own database. Wait for the line <code>Phoenix is up and running</code>, then open <a href="http://localhost:6006">http://localhost:6006</a>.</p>
+
+  <h3>Turn tracing on</h3>
+  <p>In <code>backend/.env</code>, remove the <code>#</code> in front of this line:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/.env</span></span></figcaption>
+    <pre><code>PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006</code></pre>
+  </figure>
+  <p>Restart the backend in terminal 1 (<kbd>Ctrl</kbd>+<kbd>C</kbd>, then <code>uv run main.py</code>). It now prints <code>Phoenix tracing:  ON</code>.</p>
+
+  <h3>Look at a trace</h3>
+  <ol>
+    <li>Ask a question in the app at <a href="http://localhost:3000">localhost:3000</a>.</li>
+    <li>In Phoenix, open the project <strong>agentic-ui-tutorial</strong>. New rows appear a few seconds after each answer.</li>
+    <li>Click a row. On the left you see the spans of that run as a tree:</li>
+  </ol>
+  <figure class="code output">
+    <figcaption><span><span class="where">A trace in Phoenix</span></span></figcaption>
+    <pre><code>invocation [reporting_app]
+└─ agent_run [reporting_agent]
+   ├─ call_llm                        the LLM decides to query the database
+   ├─ execute_tool run_sql_query      the SQL and the rows that came back
+   ├─ execute_tool run_sql_query
+   ├─ call_llm                        the LLM decides which components to draw
+   ├─ execute_tool create_dashboard   a UI tool: the run pauses after these
+   ├─ execute_tool add_kpi_card
+   └─ execute_tool add_chart</code></pre>
+  </figure>
+  <p>Click the first <code>call_llm</code> and explore the right side of the screen.</p>
+  <ul>
+    <li><strong>Input</strong> shows the exact messages the LLM received. The first one, <code>system</code>, is your <code>INSTRUCTION</code> with the database description pasted in.</li>
+    <li>The <strong>Tools</strong> tab lists five tools: <code>run_sql_query</code> and the four UI tools. This is the proof of the central idea. The LLM receives the React components as tools, in the same list as the Python function.</li>
+    <li>The header shows how long the call took and how many tokens it used.</li>
+  </ul>
+  <div class="note key">
+    <span class="tag">One question, two traces</span>
+    <p>A question that builds a dashboard shows up as two rows. The first trace ends with the UI tool calls, because the run pauses there. The second trace starts when the browser sends the results back, and contains the final <code>call_llm</code> that writes the summary. The <strong>Sessions</strong> tab groups both under one conversation.</p>
+  </div>
+  <p>When the LLM asks for several tools at once, ADK adds one extra span called <code>execute_tool (merged)</code>. You can ignore it.</p>
+
+  <h3>How it is wired</h3>
+  <p>All of the tracing code is in one function. The agent code did not change.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/tracing.py</span></span></figcaption>
+    <pre><code>def setup_tracing() -&gt; bool:
+    """Turn tracing on if PHOENIX_COLLECTOR_ENDPOINT is set. Returns True if on."""
+    if not os.getenv("PHOENIX_COLLECTOR_ENDPOINT"):
+        return False
+
+    from openinference.instrumentation.google_adk import GoogleADKInstrumentor
+    from phoenix.otel import register
+
+    # 1. Create a "tracer provider": the object that ships traces to Phoenix.
+    #    It reads the address from PHOENIX_COLLECTOR_ENDPOINT.
+<span class="hl">    tracer_provider = register(</span>
+        project_name=os.getenv("PHOENIX_PROJECT_NAME", "agentic-ui-tutorial"),
+        protocol="http/protobuf",  # send over HTTP to &lt;endpoint&gt;/v1/traces
+        batch=True,                # send in the background so the agent is never slowed down
+        set_global_tracer_provider=False,  # trace only the agent, not every HTTP request
+        verbose=False,
+    )
+
+    # 2. Instrument Google ADK: from now on every agent run, LLM call and
+    #    tool call is recorded automatically. No changes to agent.py needed.
+<span class="hl">    GoogleADKInstrumentor().instrument(tracer_provider=tracer_provider)</span>
+    return True</code></pre>
+  </figure>
+  <p>Phoenix builds on <a href="https://opentelemetry.io/">OpenTelemetry</a>, the common standard for traces. <code>register</code> sets up where traces are sent. <code>GoogleADKInstrumentor</code> hooks into ADK, so that every agent run, LLM call and tool call is recorded automatically. Because tracing is switched on by an environment variable, the app keeps working when Phoenix is not running.</p>
+</section>
+
+<!-- ====================================================================== -->
+<section id="step-11">
+  <p class="eyebrow">Step 11</p>
+  <h2>Make it yours</h2>
+  <p>You learn this pattern by changing it. The exercises go from easy to harder.</p>
+
+  <h3>Exercise 1 · Restyle a component</h3>
+  <p>Open <code>frontend/components/KpiCard.tsx</code> and change how the card looks. Make the number blue, or add a border. Save, and the page updates. You changed the UI without touching the agent, because the agent only knows the tool, not the component.</p>
+
+  <h3>Exercise 2 · Change the agent's behavior</h3>
+  <p>In <code>backend/agent.py</code>, edit <code>INSTRUCTION</code>. For example, add the rule &ldquo;Always add a table under the charts&rdquo;, or change &ldquo;2 to 4 headline numbers&rdquo; to &ldquo;exactly 2&rdquo;. Restart the backend and ask the same question as before. If you did step 10, compare the <code>system</code> message in Phoenix before and after.</p>
+
+  <h3>Exercise 3 · Add your own UI tool</h3>
+  <p>Give the agent a fifth component: a note that states one insight in words. You will touch four frontend files and no Python. Try it yourself first. The steps are:</p>
+  <ol>
+    <li>Add a <code>NoteWidget</code> type in <code>lib/types.ts</code> and include it in <code>Widget</code>.</li>
+    <li>Create the component <code>components/NoteCard.tsx</code>.</li>
+    <li>Register a tool named <code>add_note</code> in <code>hooks/useDashboardTools.tsx</code>.</li>
+    <li>Draw the notes in <code>components/Dashboard.tsx</code>.</li>
+  </ol>
+  <p>Then ask the agent: &ldquo;Add a note with your most important insight.&rdquo;</p>
+
+  <details>
+    <summary>Show the solution</summary>
+    <div class="inner">
+      <p><strong>1.</strong> In <code>frontend/lib/types.ts</code>, replace the line that starts with <code>export type Widget</code>:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">frontend/lib/types.ts</span></span></figcaption>
+        <pre><code>export type NoteWidget = {
+  id: string;
+  kind: "note";
+  title: string;
+  text: string;
+};
+
+export type Widget = KpiWidget | ChartWidget | TableWidget | NoteWidget;</code></pre>
+      </figure>
+      <p><strong>2.</strong> Create a new file:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">frontend/components/NoteCard.tsx</span>new file</span></figcaption>
+        <pre><code>import type { NoteWidget } from "@/lib/types";
+
+/** A short text note: one insight in plain words. */
+export function NoteCard({ title, text }: NoteWidget) {
+  return (
+    &lt;div className="widget-in rounded-xl border border-line bg-surface p-4"&gt;
+      &lt;h3 className="text-sm font-semibold text-ink"&gt;{title}&lt;/h3&gt;
+      &lt;p className="mt-2 text-sm text-ink-2"&gt;{text}&lt;/p&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+      </figure>
+      <p><strong>3.</strong> In <code>frontend/hooks/useDashboardTools.tsx</code>, add this inside <code>useDashboardTools</code>, after the <code>add_table</code> tool:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">frontend/hooks/useDashboardTools.tsx</span></span></figcaption>
+        <pre><code>// --------------------------------------------------------------------------
+// Tool 5: add_note  -&gt;  &lt;NoteCard /&gt;
+// --------------------------------------------------------------------------
+useFrontendTool(
+  {
+    name: "add_note",
+    description:
+      "Add a short text note to the dashboard: one insight or recommendation in plain words.",
+    parameters: z.object({
+      title: z.string().describe("Two or three words, e.g. 'Key insight'"),
+      text: z.string().describe("One or two sentences"),
+    }),
+    handler: async ({ title, text }, { toolCall }) =&gt; {
+      addWidget(setDashboard, { id: toolCall.id, kind: "note", title, text });
+      return `Note "${title}" is now on the dashboard.`;
+    },
+    render: ({ args, status }) =&gt; (
+      &lt;ToolChip done={status === ToolCallStatus.Complete}&gt;Note · {args.title}&lt;/ToolChip&gt;
+    ),
+  },
+  [],
+);</code></pre>
+      </figure>
+      <p><strong>4.</strong> In <code>frontend/components/Dashboard.tsx</code>, import the new pieces at the top:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">frontend/components/Dashboard.tsx</span>imports</span></figcaption>
+        <pre><code>import { NoteCard } from "@/components/NoteCard";
+import type { ChartWidget, DashboardState, KpiWidget, NoteWidget, TableWidget } from "@/lib/types";</code></pre>
+      </figure>
+      <p>Pick the notes out of the state, next to the similar line for <code>tables</code>:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">frontend/components/Dashboard.tsx</span></span></figcaption>
+        <pre><code>const notes = dashboard.widgets.filter((widget): widget is NoteWidget =&gt; widget.kind === "note");</code></pre>
+      </figure>
+      <p>And draw them, after the block that draws the tables:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">frontend/components/Dashboard.tsx</span></span></figcaption>
+        <pre><code>{notes.map((widget) =&gt; (
+  &lt;NoteCard key={widget.id} {...widget} /&gt;
+))}</code></pre>
+      </figure>
+      <p>Save everything and ask for a note. You did not restart or edit the backend. The page told the agent about the new tool by itself, through <code>AGUIToolset()</code>. If you want the agent to add a note to every dashboard without being asked, mention <code>add_note</code> in <code>INSTRUCTION</code>.</p>
+    </div>
+  </details>
+
+  <h3>Exercise 4 · Use your own data</h3>
+  <p>Replace <code>backend/data/sales.db</code> with any SQLite database, or change <code>seed_database.py</code>. The table description in the prompt is generated from the file, so it adapts by itself. Update the first lines of <code>INSTRUCTION</code>, which still talk about BrightCart and the <code>sales</code> view.</p>
+
+  <h3>Exercise 5 · Watch the events live</h3>
+  <p>In <code>frontend/app/layout.tsx</code>, change <code>enableInspector={false}</code> to <code>true</code>. A floating button appears on the page. It opens CopilotKit's inspector, which shows the AG-UI events from step 8 while they happen.</p>
+</section>
+
+<!-- ====================================================================== -->
+<p class="part">Help</p>
+
+<section id="troubleshooting">
+  <p class="eyebrow">Help</p>
+  <h2>Troubleshooting</h2>
+  <p>Errors from the agent show up in two places: as a red bar at the bottom of the web page, and with more detail in terminal 1. Find your symptom below.</p>
+
+  <details class="fix">
+    <summary>The backend prints <code>WARNING: missing in backend/.env: GOOGLE_API_KEY</code></summary>
+    <div class="inner"><p>There is no <code>backend/.env</code> file, or the key line in it is empty. Do <a href="#step-4">step 4</a> again. The file must be named exactly <code>.env</code> and be inside the <code>backend</code> folder. Restart the backend afterwards.</p></div>
+  </details>
+  <details class="fix">
+    <summary>Red bar: <code>API key not valid. Please pass a valid API key.</code></summary>
+    <div class="inner"><p>The key in <code>backend/.env</code> is wrong or incomplete. Copy it again from <a href="https://aistudio.google.com/apikey">AI Studio</a>. There must be no quotes and no spaces around it. Restart the backend.</p></div>
+  </details>
+  <details class="fix">
+    <summary>Red bar mentions <code>429</code>, <code>RESOURCE_EXHAUSTED</code> or &ldquo;quota&rdquo;</summary>
+    <div class="inner"><p>You reached the request limit of the free tier. One question uses several LLM requests. Wait a minute and try again. If it keeps happening, set <code>MODEL=gemini-3.5-flash-lite</code> in <code>backend/.env</code>, or switch provider as in <a href="#step-9">step 9</a>.</p></div>
+  </details>
+  <details class="fix">
+    <summary>Red bar: <code>fetch failed</code></summary>
+    <div class="inner"><p>The web app cannot reach the agent. Check that terminal 1 is still running <code>uv run main.py</code> and that <a href="http://localhost:8000/health">localhost:8000/health</a> answers. If you changed the backend port, see the next item.</p></div>
+  </details>
+  <details class="fix">
+    <summary>A port is already in use (<code>address already in use</code>)</summary>
+    <div class="inner">
+      <ul>
+        <li><strong>3000 (web app):</strong> Next.js picks the next free port by itself. Use the address it prints.</li>
+        <li><strong>8000 (agent):</strong> add <code>PORT=8001</code> to <code>backend/.env</code>. Then copy <code>frontend/.env.example</code> to <code>frontend/.env.local</code> and set <code>AGENT_URL=http://127.0.0.1:8001/</code>. Restart both terminals.</li>
+        <li><strong>6006 (Phoenix):</strong> choose another port with the <code>PHOENIX_PORT</code> variable when you start it, and use the same port in <code>PHOENIX_COLLECTOR_ENDPOINT</code>. <span class="only-mac">On macOS and Linux: <code>PHOENIX_PORT=6007 uv run phoenix serve</code>.</span> <span class="only-win">In PowerShell: <code>$env:PHOENIX_PORT = "6007"; uv run phoenix serve</code>.</span></li>
+      </ul>
+    </div>
+  </details>
+  <details class="fix">
+    <summary><code>uv: command not found</code>, or <code>uv</code> is not recognized</summary>
+    <div class="inner"><p>Close the terminal and open a new one after installing uv. If it still fails, follow the <a href="https://docs.astral.sh/uv/getting-started/installation/">uv installation guide</a>, or use the pip instructions in <a href="#step-4">step 4</a>.</p></div>
+  </details>
+  <details class="fix">
+    <summary><code>npm run dev</code> says <code>next: command not found</code>, or <code>'next' is not recognized</code></summary>
+    <div class="inner"><p>The JavaScript packages are not installed. They are not part of the repository, so every new clone needs them. Run <code>npm install</code> inside the <code>frontend</code> folder (<a href="#step-5">step 5</a>), then <code>npm run dev</code> again. The same fix applies to <code>Module not found: Can't resolve '@copilotkit/react-core'</code>.</p></div>
+  </details>
+  <details class="fix">
+    <summary>The backend stops with <code>ModuleNotFoundError: No module named 'dotenv'</code> (or <code>'google.adk'</code>)</summary>
+    <div class="inner"><p>Python is running without the project's packages. Start the backend with <code>uv run main.py</code>, not with <code>python main.py</code>. If you use pip, activate the environment first and run <code>pip install -r requirements.txt</code> (<a href="#step-4">step 4</a>).</p></div>
+  </details>
+  <details class="fix">
+    <summary><code>npm run dev</code> complains about the Node.js version</summary>
+    <div class="inner"><p>Next.js 16 needs Node.js 20.9 or newer. Check with <code>node --version</code> and install the current LTS version from <a href="https://nodejs.org/">nodejs.org</a>.</p></div>
+  </details>
+  <details class="fix">
+    <summary>The agent answers in text but the dashboard stays empty</summary>
+    <div class="inner"><p>The LLM chose not to call the UI tools. Ask more directly, for example &ldquo;Build a dashboard of 2025 sales&rdquo;. Small or local models do this more often. A stronger model follows the instructions more reliably.</p></div>
+  </details>
+  <details class="fix">
+    <summary>The backend stops with <code>sales.db not found</code></summary>
+    <div class="inner"><p>The database file is missing. Run <code>uv run data/seed_database.py</code> in the <code>backend</code> folder (<a href="#step-3">step 3</a>), then start the backend again.</p></div>
+  </details>
+  <details class="fix">
+    <summary>No traces appear in Phoenix</summary>
+    <div class="inner"><p>Check three things. The line <code>PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006</code> in <code>backend/.env</code> has no <code>#</code> in front. You restarted the backend after editing, and it prints <code>Phoenix tracing:  ON</code>. Phoenix itself is still running in terminal 3. Traces are sent in small batches, so wait about five seconds and refresh.</p></div>
+  </details>
+  <details class="fix">
+    <summary>Windows: <code>UnicodeDecodeError</code> when the backend starts</summary>
+    <div class="inner"><p>Run <code>$env:PYTHONUTF8 = "1"</code> in PowerShell, then start the backend again in the same window.</p></div>
+  </details>
+  <details class="fix">
+    <summary>I changed a file and nothing happened</summary>
+    <div class="inner"><p>The frontend reloads by itself when you save. The backend does not. After changing a Python file or <code>.env</code>, stop the backend with <kbd>Ctrl</kbd>+<kbd>C</kbd> and run <code>uv run main.py</code> again.</p></div>
+  </details>
+</section>
+
+<!-- ====================================================================== -->
+<section id="reference">
+  <p class="eyebrow">Help</p>
+  <h2>Versions and links</h2>
+  <p>These libraries change quickly. The repository pins exact versions in <code>backend/uv.lock</code> and <code>frontend/package-lock.json</code>, so what you install is what was tested in November 2026. If you upgrade a package, expect to adjust some code.</p>
+  <div class="table">
+    <table>
+      <thead><tr><th>Backend (Python 3.12)</th><th>Version</th><th>Frontend (Node.js 20.9+)</th><th>Version</th></tr></thead>
+      <tbody>
+        <tr><td><code>google-adk</code></td><td>2.15.0</td><td><code>next</code></td><td>16.4.6</td></tr>
+        <tr><td><code>ag-ui-adk</code></td><td>0.14.0</td><td><code>react</code></td><td>19.3.1</td></tr>
+        <tr><td><code>litellm</code></td><td>1.110.2</td><td><code>@copilotkit/react-core</code></td><td>1.90.1</td></tr>
+        <tr><td><code>arize-phoenix</code></td><td>22.0.1</td><td><code>@copilotkit/runtime</code></td><td>1.90.1</td></tr>
+        <tr><td><code>arize-phoenix-otel</code></td><td>0.17.3</td><td><code>@ag-ui/client</code></td><td>1.0.5</td></tr>
+        <tr><td><code>openinference-instrumentation-google-adk</code></td><td>1.1.9</td><td><code>recharts</code></td><td>3.11.1</td></tr>
+        <tr><td><code>fastapi</code></td><td>0.165.0</td><td><code>zod</code></td><td>3.25.76</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Official documentation</h3>
+  <ul>
+    <li><a href="https://adk.dev/">Google ADK</a>, and its page on <a href="https://adk.dev/agents/models/litellm/">LiteLLM models</a></li>
+    <li><a href="https://docs.copilotkit.ai/google-adk">CopilotKit with ADK</a>, including <a href="https://docs.copilotkit.ai/google-adk/frontend-tools">frontend tools</a></li>
+    <li><a href="https://docs.ag-ui.com/">The AG-UI protocol</a></li>
+    <li><a href="https://docs.litellm.ai/docs/providers">LiteLLM providers</a></li>
+    <li><a href="https://arize.com/docs/phoenix/integrations/python/google-adk/google-adk-tracing">Arize Phoenix: tracing Google ADK</a></li>
+  </ul>
+</section>
+
+<footer>
+  <p>AI402Z · Special Topics: Agentic UI. The code is in <a href="https://github.com/Aleimar/AI402ZAgenticUI">github.com/Aleimar/AI402ZAgenticUI</a> under the license in that repository.</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  // 1. Operating system switch. Remembers your choice on this device.
+  var root = document.documentElement;
+  var saved = null;
+  try { saved = localStorage.getItem("tutorial-os"); } catch (error) { /* storage may be blocked */ }
+  var guess = /Win/i.test(navigator.platform || navigator.userAgent) ? "win" : "mac";
+  function setOs(os) {
+    root.setAttribute("data-os", os);
+    document.querySelectorAll(".os button").forEach(function (button) {
+      button.setAttribute("aria-pressed", String(button.getAttribute("data-os") === os));
+    });
+  }
+  setOs(saved === "win" || saved === "mac" ? saved : guess);
+  document.querySelectorAll(".os button").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var os = button.getAttribute("data-os");
+      setOs(os);
+      try { localStorage.setItem("tutorial-os", os); } catch (error) { /* ignore */ }
+    });
+  });
+
+  // 2. Copy buttons on every code block that is not sample output.
+  document.querySelectorAll("figure.code:not(.output)").forEach(function (figure) {
+    var caption = figure.querySelector("figcaption");
+    var code = figure.querySelector("pre code");
+    if (!caption || !code) return;
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "copy";
+    button.textContent = "Copy";
+    button.addEventListener("click", function () {
+      var text = code.innerText;
+      function done() {
+        button.textContent = "Copied";
+        setTimeout(function () { button.textContent = "Copy"; }, 1500);
+      }
+      function fallback() {
+        var range = document.createRange();
+        range.selectNodeContents(code);
+        var selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        button.textContent = "Press Ctrl+C";
+        setTimeout(function () { button.textContent = "Copy"; }, 2500);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else {
+        fallback();
+      }
+    });
+    caption.appendChild(button);
+  });
+
+  // 3. Highlight the current step in the rail while you scroll.
+  var links = {};
+  document.querySelectorAll(".rail a[href^='#']").forEach(function (link) {
+    links[link.getAttribute("href").slice(1)] = link;
+  });
+  if ("IntersectionObserver" in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        Object.keys(links).forEach(function (id) { links[id].removeAttribute("aria-current"); });
+        if (links[entry.target.id]) links[entry.target.id].setAttribute("aria-current", "true");
+      });
+    }, { rootMargin: "-10% 0px -80% 0px" });
+    document.querySelectorAll("main section[id]").forEach(function (section) { observer.observe(section); });
+  }
+})();
+</script>
+</body>
+</html>

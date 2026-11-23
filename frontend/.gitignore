@@ -1,0 +1,19 @@
+# Files in this list are NOT uploaded to GitHub.
+
+# Downloaded packages (CopilotKit, Next.js, React...). About 1 GB.
+# Everyone recreates this folder with:  npm install
+node_modules/
+
+# Files that Next.js generates when it runs or builds
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Local settings
+.env
+.env.local
+.env.*.local
+
+# Operating system clutter
+.DS_Store
+Thumbs.db
