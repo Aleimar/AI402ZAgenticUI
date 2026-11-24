@@ -7,6 +7,7 @@ dependencies = [
     "google-adk==2.15.0",                                 # the agent framework
     "ag-ui-adk==0.14.0",                                  # the bridge between ADK and the web page
     "litellm==1.110.2",                                   # other LLM providers (step 9)
+    "mcp==2.3.0",                                         # MCP tool servers (warm-up)
     "fastapi==0.165.0",                                   # the web server
     "uvicorn==0.54.0",
     "python-dotenv==1.2.4",                               # reads the .env file

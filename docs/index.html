@@ -323,6 +323,7 @@ footer { margin-top: 5rem; padding-top: 1.25rem; border-top: 1px solid var(--lin
     <li><a href="#step-3"><span class="n">3</span>Install ADK, build the database</a></li>
     <li><a href="#step-4"><span class="n">4</span>Start the agent</a></li>
     <li><a href="#warmup"><span class="n">+</span>Warm-up: a tiny agent</a></li>
+    <li><a href="#warmup-mcp"><span class="n">+</span>Warm-up 2: tools through MCP</a></li>
     <li><a href="#step-5"><span class="n">5</span>Install CopilotKit, start the app</a></li>
     <li><a href="#step-6"><span class="n">6</span>Ask for a dashboard</a></li>
   </ol>
@@ -627,6 +628,8 @@ cd AI402ZAgenticUI</code></pre>
 │   ├── main.py                      the web server that exposes the agent
 │   ├── tracing.py                   Arize Phoenix setup
 │   ├── warmup/first_agent/agent.py  optional warm-up: a tiny agent for ADK Web
+│   ├── warmup/mcp_agent/server.py   optional warm-up 2: an MCP server with two tools
+│   ├── warmup/mcp_agent/agent.py    optional warm-up 2: an agent that uses that server
 │   ├── data/seed_database.py        creates the sample database
 │   ├── data/sales.db                the sample database
 │   ├── pyproject.toml               the list of Python packages to install
@@ -678,6 +681,7 @@ uv sync</code></pre>
 <span class="hl">    "google-adk==2.15.0",                                 # the agent framework</span>
 <span class="hl">    "ag-ui-adk==0.14.0",                                  # the bridge between ADK and the web page</span>
 <span class="hl">    "litellm==1.110.2",                                   # other LLM providers (step 9)</span>
+    "mcp==2.3.0",                                         # MCP tool servers (warm-up)
     "fastapi==0.165.0",                                   # the web server
     "uvicorn==0.54.0",
     "python-dotenv==1.2.4",                               # reads the .env file
@@ -950,6 +954,306 @@ uv run adk web warmup --port 8001</code></pre>
   <div class="note key">
     <span class="tag">Why the real app does not use ADK Web</span>
     <p>ADK Web only knows backend tools. The dashboard agent also needs tools that live in the browser, so it needs its own web page. That page is what you install next.</p>
+  </div>
+</section>
+
+<!-- ====================================================================== -->
+<section id="warmup-mcp">
+  <p class="eyebrow">Optional warm-up 2</p>
+  <h2>Give an agent tools through MCP</h2>
+  <p>In the first warm-up the tool was a Python function inside the agent's own file. That is simple, but only that one agent can use it. <strong>MCP</strong>, the Model Context Protocol, is a standard way to put tools in a separate program so that any agent can use them. This warm-up is also not part of the dashboard. If you want to go straight to the dashboard, skip to <a href="#step-5">step 5</a>.</p>
+  <div class="table">
+    <table>
+      <thead><tr><th>Word</th><th>Meaning</th><th>In this warm-up</th></tr></thead>
+      <tbody>
+        <tr><td>MCP server</td><td>A program that offers tools</td><td><code>warmup/mcp_agent/server.py</code></td></tr>
+        <tr><td>MCP client</td><td>A program that connects to a server, lists its tools and calls them</td><td>The MCP Inspector, then your ADK agent</td></tr>
+        <tr><td>Transport</td><td>How the two talk to each other</td><td><code>stdio</code>: the client starts the server and they talk through stdin and stdout</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Install MCP</h3>
+  <p>You already did. The MCP library for Python is the package <code>mcp</code>, and it is in the list that <code>uv sync</code> installed in step 3:</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/pyproject.toml</span></span></figcaption>
+    <pre><code>    "litellm==1.110.2",                                   # other LLM providers (step 9)
+<span class="hl">    "mcp==2.3.0",                                         # MCP tool servers (warm-up)</span></code></pre>
+  </figure>
+  <div class="note check">
+    <span class="tag">Checkpoint</span>
+    <p>In the <code>backend</code> folder, run <code>uv run python -c "from importlib.metadata import version; print('mcp', version('mcp'))"</code>. It prints <code>mcp 2.3.0</code>. In a project of your own, the command to install it is <code>uv add mcp==2.3.0</code>.</p>
+  </div>
+  <div class="note warn">
+    <span class="tag">mcp 2 is not mcp 1</span>
+    <p>Many examples on the web were written for version 1 and start with <code>from mcp.server.fastmcp import FastMCP</code>. In version 2 that class is called <code>MCPServer</code>. The old import fails with a message that tells you so.</p>
+  </div>
+
+  <h3>Read the MCP server</h3>
+  <p>The server has two tools. Both read the sample database. Compare them with the tool in the first warm-up: the functions look the same. The new parts are highlighted.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/warmup/mcp_agent/server.py</span></span></figcaption>
+    <pre><code>"""Warm-up: a tiny MCP server.
+
+MCP (Model Context Protocol) is a standard way to offer tools to ANY agent.
+In first_agent the tool lived inside the agent's own file. Here the tools live
+in this separate program, the MCP SERVER. An agent (the MCP CLIENT) starts
+this program, asks "which tools do you have?" and then calls them.
+
+Nobody runs this file by hand in normal use. Two programs start it for you:
+
+    the MCP Inspector, a test page for MCP servers (run inside backend/):
+
+        npx @modelcontextprotocol/inspector@2.16.0 uv run warmup/mcp_agent/server.py
+
+    the ADK agent in agent.py, every time it needs the tools.
+
+Important: this server talks to its client through stdin and stdout.
+Never use print() in this file. It would corrupt the conversation.
+"""
+
+import sqlite3
+from pathlib import Path
+
+from mcp.server.mcpserver import MCPServer
+
+DB_PATH = Path(__file__).parents[2] / "data" / "sales.db"
+
+# ---------------------------------------------------------------------------
+# 1. The SERVER. The name is what clients such as the Inspector display.
+# ---------------------------------------------------------------------------
+<span class="hl">mcp = MCPServer("brightcart-sales")</span>
+
+
+def run_query(sql: str, parameters: tuple) -&gt; list:
+    """Run one SELECT on the sales database and return the rows."""
+    connection = sqlite3.connect(DB_PATH)
+    try:
+        return connection.execute(sql, parameters).fetchall()
+    finally:
+        connection.close()
+
+
+# ---------------------------------------------------------------------------
+# 2. The TOOLS. Still normal Python functions, as in first_agent.
+#    @mcp.tool() registers the function with the server. The server sends the
+#    name, the parameters and the docstring to every client that connects.
+# ---------------------------------------------------------------------------
+<span class="hl">@mcp.tool()</span>
+def get_top_products(year: int, limit: int = 5) -&gt; dict:
+    """Get BrightCart's best-selling products in one year, ranked by revenue.
+
+    Args:
+        year: The year to report on. The data covers 2024 and 2025.
+        limit: How many products to return. The default is 5.
+    """
+    rows = run_query(
+        "SELECT product_name, ROUND(SUM(revenue)) FROM sales WHERE order_year = ? "
+        "GROUP BY product_name ORDER BY 2 DESC LIMIT ?",
+        (str(year), limit),
+    )
+    if not rows:
+        return {"status": "error", "error_message": f"There is no data for {year}."}
+    return {"status": "success", "year": year, "revenue_usd": dict(rows)}
+
+
+<span class="hl">@mcp.tool()</span>
+def get_revenue_by_month(year: int) -&gt; dict:
+    """Get BrightCart's total revenue for each month of one year.
+
+    Args:
+        year: The year to report on. The data covers 2024 and 2025.
+    """
+    rows = run_query(
+        "SELECT order_month, ROUND(SUM(revenue)) FROM sales WHERE order_year = ? "
+        "GROUP BY order_month ORDER BY order_month",
+        (str(year),),
+    )
+    if not rows:
+        return {"status": "error", "error_message": f"There is no data for {year}."}
+    return {"status": "success", "year": year, "revenue_usd": dict(rows)}
+
+
+# ---------------------------------------------------------------------------
+# 3. START the server. "stdio" means: the client starts this file as a child
+#    process and the two talk through stdin and stdout. No port, no URL.
+# ---------------------------------------------------------------------------
+if __name__ == "__main__":
+<span class="hl">    mcp.run(transport="stdio")</span></code></pre>
+  </figure>
+  <ul>
+    <li><code>@mcp.tool()</code> turns a function into an MCP tool. As before, the type hints and the docstring are what the LLM sees.</li>
+    <li>There is no agent and no LLM in this file. A server only offers tools. It does not know who will call them.</li>
+    <li>Do not use <code>print()</code> in a stdio server. stdout is the line the server and the client talk on.</li>
+  </ul>
+
+  <h3>Test the server with the MCP Inspector</h3>
+  <p>The <strong>MCP Inspector</strong> is the official test page for MCP servers. It is an MCP client with buttons instead of an LLM, so you can check your tools before any agent uses them. It runs on Node.js through <code>npx</code>, which downloads it the first time. Nothing is added to the project.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">New terminal</span>backend</span></figcaption>
+    <pre><code>cd backend
+npx @modelcontextprotocol/inspector@2.16.0 uv run warmup/mcp_agent/server.py</code></pre>
+  </figure>
+  <p>Read the command in two halves. <code>npx @modelcontextprotocol/inspector@2.16.0</code> starts the Inspector. Everything after it, <code>uv run warmup/mcp_agent/server.py</code>, is the command the Inspector will use to start your server. The first time, npx asks <code>Ok to proceed? (y)</code>. Press <kbd>Enter</kbd>.</p>
+  <figure class="code output">
+    <figcaption><span><span class="where">Expected output</span></span></figcaption>
+    <pre><code>Starting MCP inspector...
+
+MCP Inspector Web is up and running at:
+   http://127.0.0.1:6274?MCP_INSPECTOR_API_TOKEN=9c7aee72...</code></pre>
+  </figure>
+  <p>Your browser opens that address by itself. If it does not, copy the whole address from the terminal, including the long token at the end.</p>
+  <ol>
+    <li>The page shows one server card with the command <code>uv run warmup/mcp_agent/server.py</code>. Its status is <strong>Disconnected</strong>. Click the switch on the card. The status changes to <strong>Connected</strong> and the name at the top left becomes <code>brightcart-sales</code>, the name you gave <code>MCPServer</code>.</li>
+    <li>Click <strong>Tools</strong> at the top. The list shows <strong>Tools (2)</strong>: <code>get_revenue_by_month</code> and <code>get_top_products</code>.</li>
+    <li>Click <code>get_top_products</code>. The Inspector built a form from your type hints: <strong>Year</strong> is required, and <strong>Limit</strong> already holds <code>5</code>, the default value in your function.</li>
+    <li>Type <code>2025</code> in <strong>Year</strong> and click <strong>Execute Tool</strong>.</li>
+  </ol>
+  <figure class="code output">
+    <figcaption><span><span class="where">Result in the Inspector</span></span></figcaption>
+    <pre><code>{
+  "status": "success",
+  "year": 2025,
+  "revenue_usd": {
+    "Noise-Cancelling Headphones": 129057.0,
+    "Robot Vacuum": 105716.0,
+    "Ergonomic Office Chair": 89078.0,
+    ...
+  }
+}</code></pre>
+  </figure>
+  <p>The <strong>Messages</strong> panel on the right lists every message between the Inspector and your server. Find <code>TOOLS/LIST</code>, sent when you connected: the client asks which tools exist. <strong>Execute Tool</strong> sends a second kind of message, <code>tools/call</code>. An agent sends these same two messages.</p>
+  <div class="note check">
+    <span class="tag">Checkpoint</span>
+    <p>The result starts with <strong>Noise-Cancelling Headphones</strong> at <strong>129057.0</strong>. Your server works, and you have not used an LLM or an API key yet.</p>
+  </div>
+  <p>Stop the Inspector with <kbd>Ctrl</kbd>+<kbd>C</kbd> in its terminal.</p>
+  <details>
+    <summary>The Inspector prints <code>EBADENGINE</code> warnings or does not start</summary>
+    <div class="inner"><p>Inspector 2.16.0 asks for a recent Node.js: 22.23.4 or newer, 24.22.1 or newer, or 26.12.1 or newer. With a slightly older Node.js 22 it prints <code>npm warn EBADENGINE</code> and still works (it was tested on 22.16). If the page does not open at all, install the current LTS version from <a href="https://nodejs.org/">nodejs.org</a> and run the command again.</p></div>
+  </details>
+  <details>
+    <summary>Testing without a browser</summary>
+    <div class="inner">
+      <p>The Inspector also has a command-line mode. It prints the answer as JSON:</p>
+      <figure class="code">
+        <figcaption><span><span class="where">Terminal</span>backend</span></figcaption>
+        <pre><code>npx @modelcontextprotocol/inspector@2.16.0 --cli uv run warmup/mcp_agent/server.py --method tools/list
+npx @modelcontextprotocol/inspector@2.16.0 --cli uv run warmup/mcp_agent/server.py --method tools/call --tool-name get_top_products --tool-arg year=2025 limit=3</code></pre>
+      </figure>
+    </div>
+  </details>
+
+  <h3>Connect an ADK agent to the server</h3>
+  <p>Now replace the Inspector with an agent. ADK's MCP client is called <code>McpToolset</code>. You tell it how to start the server, and it turns the server's tools into normal ADK tools.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/warmup/mcp_agent/agent.py</span></span></figcaption>
+    <pre><code>"""Warm-up: an ADK agent that gets its tools from an MCP server.
+
+This file is NOT part of the dashboard app. Do first_agent first.
+
+In first_agent the tool was a Python function in the same file. Here the
+agent has NO tool functions at all. It connects to the MCP server in
+server.py (same folder) and uses whatever tools that server offers.
+
+Try it in ADK's built-in test page:
+
+    uv run adk web warmup --port 8001
+
+then open http://localhost:8001 and pick mcp_agent at the top left.
+"""
+
+import os
+import sys
+from pathlib import Path
+
+from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
+<span class="hl">from google.adk.tools.mcp_tool import McpToolset, StdioConnectionParams</span>
+<span class="hl">from mcp import StdioServerParameters</span>
+
+SERVER_FILE = Path(__file__).parent / "server.py"
+
+# ---------------------------------------------------------------------------
+# 1. HOW TO START the MCP server: a command plus its arguments.
+#    sys.executable is the Python that runs this agent (the one in .venv),
+#    so this is the same as typing:  python warmup/mcp_agent/server.py
+# ---------------------------------------------------------------------------
+server_params = StdioServerParameters(
+    command=sys.executable,
+    args=[str(SERVER_FILE)],
+)
+
+# ---------------------------------------------------------------------------
+# 2. The MCP TOOLSET is the MCP client. It starts the server, asks it for its
+#    list of tools and hands them to the agent as normal ADK tools.
+#    timeout: how many seconds to wait for the server to start.
+# ---------------------------------------------------------------------------
+<span class="hl">sales_tools = McpToolset(</span>
+<span class="hl">    connection_params=StdioConnectionParams(server_params=server_params, timeout=15),</span>
+)
+
+# ---------------------------------------------------------------------------
+# 3. The MODEL. Same rule as the main app: a plain name is a Gemini model,
+#    "provider/model" goes through LiteLLM (step 9 of the tutorial).
+# ---------------------------------------------------------------------------
+MODEL_NAME = os.getenv("MODEL") or "gemini-4-hydrogen"
+model = LiteLlm(model=MODEL_NAME) if "/" in MODEL_NAME else MODEL_NAME
+
+# ---------------------------------------------------------------------------
+# 4. The AGENT. The only new thing: tools=[...] holds a toolset, not functions.
+# ---------------------------------------------------------------------------
+root_agent = LlmAgent(
+    name="mcp_agent",
+    model=model,
+    description="Answers questions about BrightCart products and monthly revenue.",
+    instruction=(
+        "You are a helpful assistant for BrightCart, a retail company. "
+        "Use your tools to get real numbers about best-selling products and "
+        "monthly revenue. Never guess a number. Answer in one or two sentences."
+    ),
+<span class="hl">    tools=[sales_tools],</span>
+)</code></pre>
+  </figure>
+  <ul>
+    <li>This file contains no tool function and no SQL. The agent learns its tools from the server when it starts.</li>
+    <li><code>StdioServerParameters</code> holds the same information you gave the Inspector: a command and its arguments.</li>
+    <li>Everything else (model, instructions, <code>root_agent</code>) is the same as in the first warm-up.</li>
+  </ul>
+
+  <h3>Run it in ADK Web</h3>
+  <p>Use the same command as in the first warm-up. You do not start <code>server.py</code> yourself. The agent starts it.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">Terminal</span>backend</span></figcaption>
+    <pre><code>cd backend
+uv run adk web warmup --port 8001</code></pre>
+  </figure>
+  <ol>
+    <li>Open <a href="http://localhost:8001">http://localhost:8001</a> and pick <code>mcp_agent</code> in the list at the top left.</li>
+    <li>Ask: <em>What were the top 3 products in 2025?</em></li>
+    <li>Watch the <strong>Events</strong> list. It has the same shape as before, but the tool now runs in another program.</li>
+  </ol>
+  <figure class="code output">
+    <figcaption><span><span class="where">Events in ADK Web</span></span></figcaption>
+    <pre><code>#1  you         What were the top 3 products in 2025?
+#2  the agent   get_top_products(year=2025, limit=3)   the LLM asks for the MCP tool
+#3  the agent   get_top_products                       server.py ran it, the result goes back
+#4  the agent   The top three products in 2025 were Noise-Cancelling Headphones ...</code></pre>
+  </figure>
+  <div class="note check">
+    <span class="tag">Checkpoint</span>
+    <p>The answer names <strong>Noise-Cancelling Headphones</strong> (about $129,057), <strong>Robot Vacuum</strong> (about $105,716) and <strong>Ergonomic Office Chair</strong> (about $89,078). These are the numbers you saw in the Inspector.</p>
+  </div>
+
+  <h3>Try these</h3>
+  <ul>
+    <li>Ask <em>&ldquo;Which month of 2024 had the most revenue?&rdquo;</em>. The agent picks the other tool, <code>get_revenue_by_month</code>.</li>
+    <li>Add a third tool to <code>server.py</code>, for example revenue by category. Check it in the Inspector first. Then restart ADK Web and ask about it. You did not change <code>agent.py</code>, and the agent can still use the new tool.</li>
+    <li>In <code>agent.py</code>, add <code>tool_filter=["get_top_products"]</code> to <code>McpToolset(...)</code>. Now the agent only receives that one tool. This is how you limit what an agent may do with a big server.</li>
+  </ul>
+  <div class="note key">
+    <span class="tag">Function tool or MCP tool?</span>
+    <p>Use a plain function when the tool belongs to one agent, as in the dashboard app. Use MCP when several agents or apps should share the tool, or when someone else already wrote the server. Many products publish an MCP server, and <code>McpToolset</code> connects to them the same way.</p>
   </div>
 </section>
 
@@ -1751,6 +2055,7 @@ import type { ChartWidget, DashboardState, KpiWidget, NoteWidget, TableWidget } 
         <tr><td><code>arize-phoenix-otel</code></td><td>0.17.3</td><td><code>@ag-ui/client</code></td><td>1.0.5</td></tr>
         <tr><td><code>openinference-instrumentation-google-adk</code></td><td>1.1.9</td><td><code>recharts</code></td><td>3.11.1</td></tr>
         <tr><td><code>fastapi</code></td><td>0.165.0</td><td><code>zod</code></td><td>3.25.76</td></tr>
+        <tr><td><code>mcp</code></td><td>2.3.0</td><td><code>@modelcontextprotocol/inspector</code> (run with npx, warm-up 2)</td><td>2.16.0</td></tr>
       </tbody>
     </table>
   </div>
@@ -1760,6 +2065,7 @@ import type { ChartWidget, DashboardState, KpiWidget, NoteWidget, TableWidget } 
     <li><a href="https://docs.copilotkit.ai/google-adk">CopilotKit with ADK</a>, including <a href="https://docs.copilotkit.ai/google-adk/frontend-tools">frontend tools</a></li>
     <li><a href="https://docs.ag-ui.com/">The AG-UI protocol</a></li>
     <li><a href="https://docs.litellm.ai/docs/providers">LiteLLM providers</a></li>
+    <li><a href="https://modelcontextprotocol.io/">Model Context Protocol</a>, its <a href="https://py.sdk.modelcontextprotocol.io/">Python SDK</a> and the <a href="https://github.com/modelcontextprotocol/inspector">MCP Inspector</a></li>
     <li><a href="https://arize.com/docs/phoenix/integrations/python/google-adk/google-adk-tracing">Arize Phoenix: tracing Google ADK</a></li>
   </ul>
 </section>
