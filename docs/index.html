@@ -322,6 +322,7 @@ footer { margin-top: 5rem; padding-top: 1.25rem; border-top: 1px solid var(--lin
     <li><a href="#step-2"><span class="n">2</span>Get the code</a></li>
     <li><a href="#step-3"><span class="n">3</span>Install ADK, build the database</a></li>
     <li><a href="#step-4"><span class="n">4</span>Start the agent</a></li>
+    <li><a href="#warmup"><span class="n">+</span>Warm-up: a tiny agent</a></li>
     <li><a href="#step-5"><span class="n">5</span>Install CopilotKit, start the app</a></li>
     <li><a href="#step-6"><span class="n">6</span>Ask for a dashboard</a></li>
   </ol>
@@ -625,6 +626,7 @@ cd AI402ZAgenticUI</code></pre>
 │   ├── tools.py                     the backend tool: run_sql_query
 │   ├── main.py                      the web server that exposes the agent
 │   ├── tracing.py                   Arize Phoenix setup
+│   ├── warmup/first_agent/agent.py  optional warm-up: a tiny agent for ADK Web
 │   ├── data/seed_database.py        creates the sample database
 │   ├── data/sales.db                the sample database
 │   ├── pyproject.toml               the list of Python packages to install
@@ -812,6 +814,143 @@ python main.py</code></pre>
       <p>Put your key in <code>.env</code> before the last command. In the rest of the tutorial, wherever you read <code>uv run something</code>, activate the environment and type the command without <code>uv run</code>. For a file such as <code>main.py</code>, type <code>python main.py</code>.</p>
     </div>
   </details>
+</section>
+
+<!-- ====================================================================== -->
+<section id="warmup">
+  <p class="eyebrow">Optional warm-up</p>
+  <h2>Meet Google ADK with a tiny agent</h2>
+  <p>Before you start the full app, spend ten minutes with the smallest useful agent. It is not part of the dashboard. It has one tool and answers in plain text, and you talk to it in <strong>ADK Web</strong>, a test page that ships with Google ADK. If you want to go straight to the dashboard, skip to <a href="#step-5">step 5</a>.</p>
+
+  <h3>Read the agent</h3>
+  <p>The whole agent is one file. It has the three parts every ADK agent has: a tool, a model, and the agent that joins them with instructions.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">backend/warmup/first_agent/agent.py</span></span></figcaption>
+    <pre><code>"""Warm-up: the smallest useful Google ADK agent.
+
+This file is NOT part of the dashboard app. It exists so you can meet ADK on
+its own first. Try it in ADK's built-in test page:
+
+    uv run adk web warmup --port 8001
+
+then open http://localhost:8001
+
+An agent is three things: a MODEL, INSTRUCTIONS and TOOLS.
+"""
+
+import os
+import sqlite3
+from pathlib import Path
+
+from google.adk.agents import LlmAgent
+from google.adk.models.lite_llm import LiteLlm
+
+DB_PATH = Path(__file__).parents[2] / "data" / "sales.db"
+
+
+# ---------------------------------------------------------------------------
+# 1. A TOOL is a normal Python function.
+#    ADK shows the LLM its name, its parameters and its docstring. The LLM
+#    reads them to decide WHEN to call the function and WITH WHAT arguments.
+# ---------------------------------------------------------------------------
+<span class="hl">def get_revenue_by_region(year: int) -&gt; dict:</span>
+    """Get BrightCart's total revenue for each sales region in one year.
+
+    Args:
+        year: The year to report on. The data covers 2024 and 2025.
+
+    Returns:
+        A dictionary such as {"year": 2025, "revenue_usd": {"West": 335318.0, ...}}.
+    """
+    connection = sqlite3.connect(DB_PATH)
+    try:
+        rows = connection.execute(
+            "SELECT region, ROUND(SUM(revenue)) FROM sales WHERE order_year = ? "
+            "GROUP BY region ORDER BY 2 DESC",
+            (str(year),),
+        ).fetchall()
+    finally:
+        connection.close()
+    if not rows:
+        return {"status": "error", "error_message": f"There is no data for {year}."}
+    return {"status": "success", "year": year, "revenue_usd": dict(rows)}
+
+
+# ---------------------------------------------------------------------------
+# 2. The MODEL. Same rule as the main app: a plain name is a Gemini model,
+#    "provider/model" goes through LiteLLM (step 9 of the tutorial).
+# ---------------------------------------------------------------------------
+MODEL_NAME = os.getenv("MODEL") or "gemini-3.8-flash"
+model = LiteLlm(model=MODEL_NAME) if "/" in MODEL_NAME else MODEL_NAME
+
+# ---------------------------------------------------------------------------
+# 3. The AGENT puts model, instructions and tools together.
+#    `adk web` looks for a variable with exactly this name: root_agent.
+# ---------------------------------------------------------------------------
+<span class="hl">root_agent = LlmAgent(</span>
+    name="first_agent",
+    model=model,
+    description="Answers questions about BrightCart revenue by region.",
+    instruction=(
+        "You are a helpful assistant for BrightCart, a retail company. "
+        "When the user asks about revenue or regions, call get_revenue_by_region "
+        "to get real numbers. Never guess a number. Answer in one or two sentences."
+    ),
+<span class="hl">    tools=[get_revenue_by_region],</span>
+)</code></pre>
+  </figure>
+  <ul>
+    <li>The <strong>tool</strong> is a normal Python function. The type hint <code>year: int</code> and the docstring are what the LLM sees. Good docstrings make good tools.</li>
+    <li>The <strong>agent</strong> must be stored in a variable called <code>root_agent</code>. That is the name ADK looks for.</li>
+    <li>Next to it is a one-line <code>__init__.py</code> containing <code>from . import agent</code>. ADK needs it to load the folder.</li>
+  </ul>
+
+  <h3>Run it in ADK Web</h3>
+  <p>Open a new terminal. The server from step 4 can keep running, because this command uses another port.</p>
+  <figure class="code">
+    <figcaption><span><span class="where">New terminal</span>backend</span></figcaption>
+    <pre><code>cd backend
+uv run adk web warmup --port 8001</code></pre>
+  </figure>
+  <p><code>warmup</code> is the folder that holds the agents. Every subfolder in it is one agent. ADK reads your API key from the same <code>backend/.env</code> you made in step 4.</p>
+  <figure class="code output">
+    <figcaption><span><span class="where">Expected output</span></span></figcaption>
+    <pre><code>+-----------------------------------------------------------------------------+
+| ADK Web Server started                                                      |
+|                                                                             |
+| For local testing, access at http://127.0.0.1:8001.                         |
++-----------------------------------------------------------------------------+</code></pre>
+  </figure>
+  <ol>
+    <li>Open <a href="http://localhost:8001">http://localhost:8001</a>. The agent <code>first_agent</code> is already selected at the top left.</li>
+    <li>Type a question in the box at the bottom: <em>Which region had the most revenue in 2025?</em></li>
+    <li>Watch the <strong>Events</strong> list. One question becomes four events.</li>
+  </ol>
+  <figure class="code output">
+    <figcaption><span><span class="where">Events in ADK Web</span></span></figcaption>
+    <pre><code>#1  you         Which region had the most revenue in 2025?
+#2  the agent   get_revenue_by_region(2025)          the LLM asks for the tool
+#3  the agent   get_revenue_by_region                the function ran, the result goes back
+#4  the agent   The West region had the most revenue in 2025 ...</code></pre>
+  </figure>
+  <p>Click event <strong>#2</strong>, then look at the panel on the left. It shows the exact request that was sent to the LLM and what came back. The picture there shows the agent with its one tool.</p>
+  <div class="note check">
+    <span class="tag">Checkpoint</span>
+    <p>The answer names the <strong>West</strong> region with about <strong>$335,318</strong>. That number came from the database through your tool, not from the LLM's memory.</p>
+  </div>
+
+  <h3>Try these</h3>
+  <ul>
+    <li>Ask <em>&ldquo;And in 2024?&rdquo;</em>. The agent remembers the conversation and calls the tool again with <code>2024</code>.</li>
+    <li>Ask <em>&ldquo;What about 2030?&rdquo;</em>. The tool returns an error message, and the agent explains it in words.</li>
+    <li>Ask <em>&ldquo;Hello, who are you?&rdquo;</em>. No tool call appears, because the LLM decides when a tool is needed.</li>
+    <li>Ask <em>&ldquo;Which product sold best?&rdquo;</em>. The agent cannot answer. It only has one narrow tool. The real app fixes this by giving the agent a general tool, <code>run_sql_query</code>.</li>
+  </ul>
+  <p>When you are done, stop ADK Web with <kbd>Ctrl</kbd>+<kbd>C</kbd>.</p>
+  <div class="note key">
+    <span class="tag">Why the real app does not use ADK Web</span>
+    <p>ADK Web only knows backend tools. The dashboard agent also needs tools that live in the browser, so it needs its own web page. That page is what you install next.</p>
+  </div>
 </section>
 
 <!-- ====================================================================== -->

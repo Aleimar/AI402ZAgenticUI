@@ -73,6 +73,7 @@ The `.gitignore` files in the root, `backend/` and `frontend/` keep these out of
 
 ```
 backend/     Python agent: agent.py, tools.py, main.py, tracing.py, data/
+             warmup/ holds a tiny stand-alone agent to try in ADK Web first
 frontend/    Next.js + CopilotKit web app: app/, hooks/, components/
 docs/        The tutorial page (index.html) and the architecture diagram
 ```

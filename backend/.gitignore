@@ -12,6 +12,9 @@ venv/
 __pycache__/
 *.pyc
 
+# Chat sessions saved by "adk web" (the warm-up)
+.adk/
+
 # Operating system clutter
 .DS_Store
 Thumbs.db
