@@ -52,7 +52,7 @@ def get_revenue_by_region(year: int) -> dict:
 # 2. The MODEL. Same rule as the main app: a plain name is a Gemini model,
 #    "provider/model" goes through LiteLLM (step 9 of the tutorial).
 # ---------------------------------------------------------------------------
-MODEL_NAME = os.getenv("MODEL") or "gemini-3.8-flash"
+MODEL_NAME = os.getenv("MODEL") or "gemini-4-hydrogen"
 model = LiteLlm(model=MODEL_NAME) if "/" in MODEL_NAME else MODEL_NAME
 
 # ---------------------------------------------------------------------------

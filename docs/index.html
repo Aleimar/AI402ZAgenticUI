@@ -764,7 +764,7 @@ uv add google-adk==2.15.0 ag-ui-adk==0.14.0 litellm==1.110.2</code></pre>
   <figure class="code">
     <figcaption><span><span class="where">backend/.env</span></span></figcaption>
     <pre><code><span class="hl">GOOGLE_API_KEY=paste-your-key-here</span>
-MODEL=gemini-3.8-flash</code></pre>
+MODEL=gemini-4-hydrogen</code></pre>
   </figure>
   <p>Save the file, then start the server:</p>
   <figure class="code">
@@ -773,7 +773,7 @@ MODEL=gemini-3.8-flash</code></pre>
   </figure>
   <figure class="code output">
     <figcaption><span><span class="where">Expected output</span></span></figcaption>
-    <pre><code>Model:            gemini-3.8-flash
+    <pre><code>Model:            gemini-4-hydrogen
 Phoenix tracing:  off
 Agent endpoint:   http://localhost:8000/
 INFO:     Started server process [12345]
@@ -783,7 +783,7 @@ INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)</code>
   </figure>
   <div class="note check">
     <span class="tag">Checkpoint</span>
-    <p>Open <a href="http://localhost:8000/health">http://localhost:8000/health</a> in your browser. You should see <code>{"status":"ok","model":"gemini-3.8-flash","tracing":false}</code>.</p>
+    <p>Open <a href="http://localhost:8000/health">http://localhost:8000/health</a> in your browser. You should see <code>{"status":"ok","model":"gemini-4-hydrogen","tracing":false}</code>.</p>
   </div>
   <p>Leave this terminal running. If the output contains <code>WARNING: missing in backend/.env: GOOGLE_API_KEY</code>, the key was not saved in the right file. Fix <code>.env</code>, stop the server with <kbd>Ctrl</kbd>+<kbd>C</kbd> and start it again.</p>
 
@@ -880,7 +880,7 @@ DB_PATH = Path(__file__).parents[2] / "data" / "sales.db"
 # 2. The MODEL. Same rule as the main app: a plain name is a Gemini model,
 #    "provider/model" goes through LiteLLM (step 9 of the tutorial).
 # ---------------------------------------------------------------------------
-MODEL_NAME = os.getenv("MODEL") or "gemini-3.8-flash"
+MODEL_NAME = os.getenv("MODEL") or "gemini-4-hydrogen"
 model = LiteLlm(model=MODEL_NAME) if "/" in MODEL_NAME else MODEL_NAME
 
 # ---------------------------------------------------------------------------
@@ -1413,13 +1413,13 @@ RUN_FINISHED</code></pre>
   <figure class="code">
     <figcaption><span><span class="where">backend/agent.py</span></span></figcaption>
     <pre><code># Which LLM to use. Change it in .env, not here.
-MODEL_NAME = os.getenv("MODEL") or "gemini-3.8-flash"
+MODEL_NAME = os.getenv("MODEL") or "gemini-4-hydrogen"
 
 
 def choose_model():
     """Turn MODEL_NAME into something ADK can use.
 
-    - A plain Gemini name such as "gemini-3.8-flash" is passed to ADK as a
+    - A plain Gemini name such as "gemini-4-hydrogen" is passed to ADK as a
       string. ADK talks to Gemini natively and reads GOOGLE_API_KEY.
     - A name written as "provider/model", such as "openai/gpt-5.4-mini" or
       "ollama_chat/mistral-small3.1", is wrapped in LiteLlm. LiteLLM is a
@@ -1441,7 +1441,7 @@ def choose_model():
     <table>
       <thead><tr><th>Provider</th><th><code>MODEL=</code> (example)</th><th>Also set in <code>.env</code></th><th>Get a key</th></tr></thead>
       <tbody>
-        <tr><td>Google Gemini (default)</td><td><code>gemini-3.8-flash</code></td><td><code>GOOGLE_API_KEY</code></td><td><a href="https://aistudio.google.com/apikey">AI Studio</a>, free tier</td></tr>
+        <tr><td>Google Gemini (default)</td><td><code>gemini-4-hydrogen</code></td><td><code>GOOGLE_API_KEY</code></td><td><a href="https://aistudio.google.com/apikey">AI Studio</a>, free tier</td></tr>
         <tr><td>OpenAI</td><td><code>openai/gpt-5.4-mini</code></td><td><code>OPENAI_API_KEY</code></td><td><a href="https://platform.openai.com/api-keys">platform.openai.com</a></td></tr>
         <tr><td>Anthropic</td><td><code>anthropic/claude-sonnet-5-5</code></td><td><code>ANTHROPIC_API_KEY</code></td><td><a href="https://platform.claude.com/">platform.claude.com</a></td></tr>
         <tr><td>Groq</td><td><code>groq/openai/gpt-oss-120b</code></td><td><code>GROQ_API_KEY</code></td><td><a href="https://console.groq.com/keys">console.groq.com</a>, free tier</td></tr>
@@ -1681,7 +1681,7 @@ import type { ChartWidget, DashboardState, KpiWidget, NoteWidget, TableWidget } 
   </details>
   <details class="fix">
     <summary>Red bar mentions <code>429</code>, <code>RESOURCE_EXHAUSTED</code> or &ldquo;quota&rdquo;</summary>
-    <div class="inner"><p>You reached the request limit of the free tier. One question uses several LLM requests. Wait a minute and try again. If it keeps happening, set <code>MODEL=gemini-3.5-flash-lite</code> in <code>backend/.env</code>, or switch provider as in <a href="#step-9">step 9</a>.</p></div>
+    <div class="inner"><p>You reached the request limit of the free tier. One question uses several LLM requests. Wait a minute and try again. If it keeps happening, set <code>MODEL=gemini-4-hydrogen</code> in <code>backend/.env</code>, or switch provider as in <a href="#step-9">step 9</a>.</p></div>
   </details>
   <details class="fix">
     <summary>Red bar: <code>fetch failed</code></summary>

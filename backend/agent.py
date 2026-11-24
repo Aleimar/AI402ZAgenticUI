@@ -15,13 +15,13 @@ from google.adk.models.lite_llm import LiteLlm
 from tools import describe_database, run_sql_query
 
 # Which LLM to use. Change it in .env, not here.
-MODEL_NAME = os.getenv("MODEL") or "gemini-3.8-flash"
+MODEL_NAME = os.getenv("MODEL") or "gemini-4-hydrogen"
 
 
 def choose_model():
     """Turn MODEL_NAME into something ADK can use.
 
-    - A plain Gemini name such as "gemini-3.8-flash" is passed to ADK as a
+    - A plain Gemini name such as "gemini-4-hydrogen" is passed to ADK as a
       string. ADK talks to Gemini natively and reads GOOGLE_API_KEY.
     - A name written as "provider/model", such as "openai/gpt-5.4-mini" or
       "ollama_chat/mistral-small3.1", is wrapped in LiteLlm. LiteLLM is a
