@@ -78,16 +78,6 @@ frontend/    Next.js + CopilotKit web app: app/, hooks/, components/
 docs/        The tutorial page (index.html) and the architecture diagram
 ```
 
-## For the instructor: publishing the tutorial page
-
-GitHub always shows `README.md` on the repository page. It does not display HTML files there. The tutorial page is served by GitHub Pages instead:
-
-1. On GitHub, open **Settings → Pages**.
-2. Under **Build and deployment**, set **Source** to *Deploy from a branch*.
-3. Choose branch **main** and folder **/docs**, then **Save**.
-
-About a minute later the tutorial is live at https://aleimar.github.io/AI402ZAgenticUI/. To make it the first thing students see, click the gear next to **About** on the repository page and paste that address into **Website**.
-
 ## License
 
 See [LICENSE](LICENSE).
